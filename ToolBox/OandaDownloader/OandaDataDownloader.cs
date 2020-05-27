@@ -97,8 +97,7 @@ namespace QuantConnect.ToolBox.OandaDownloader
             // loop until last date
             while (startDateTime <= endUtc.AddDays(1))
             {
-                // request blocks of 5-second bars with a starting date/time
-                var bars = _brokerage.DownloadQuoteBars(symbol, startDateTime, endUtc.AddDays(1), Resolution.Second, DateTimeZone.Utc).ToList();
+                var bars = _brokerage.DownloadQuoteBars(symbol, startDateTime, endUtc.AddDays(1), resolution, DateTimeZone.Utc).ToList();
                 if (bars.Count == 0)
                     break;
 
@@ -143,8 +142,18 @@ namespace QuantConnect.ToolBox.OandaDownloader
                     barsToSave.AddRange(groupedBars[date]);
                 }
 
-                // calculate the next request datetime (next 5-sec bar time)
-                startDateTime = bars[bars.Count - 1].Time.AddSeconds(5);
+                int secondsAdd;
+                if (resolution == Resolution.Second)
+                {
+                    // OANDA only provides 5-second bars
+                    secondsAdd = 5;
+                }
+                else
+                {
+                    secondsAdd = (int)resolution.ToTimeSpan().TotalSeconds;
+                }
+                
+                startDateTime = bars[bars.Count - 1].Time.AddSeconds(secondsAdd);
             }
 
             if (barsToSave.Count > 0)
