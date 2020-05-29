@@ -183,6 +183,46 @@ namespace QuantConnect.Tests.Python
             }
         }
 
+        [Test]
+        public void HandlesNullableValues()
+        {
+            var converter = new PandasConverter();
+            var rawBars = Enumerable
+                .Range(0, 10)
+                .Select(i => new NullableValueData {
+                    Symbol = Symbols.AAPL,
+                    EndTime = new DateTime(2020, 1, 1),
+                    NullableInt = null,
+                    NullableTime = null,
+                    NullableColumn = null
+                })
+                .ToArray();
+
+            rawBars[0].NullableInt = 0;
+            rawBars[1].NullableTime = new DateTime(2020, 1, 2);
+
+            // GetDataFrame with argument of type IEnumerable<QuoteBar>
+            dynamic dataFrame = converter.GetDataFrame(rawBars);
+
+            using (Py.GIL())
+            {
+                Assert.AreEqual(2, dataFrame.columns.__len__().AsManagedObject(typeof(int)));
+                var count = dataFrame.__len__().AsManagedObject(typeof(int));
+                Assert.AreEqual(10, count);
+            }
+
+            // GetDataFrame with argument of type IEnumerable<QuoteBar>
+            var history = GetHistory(Symbols.AAPL, Resolution.Daily, rawBars);
+            dataFrame = converter.GetDataFrame(history);
+
+            using (Py.GIL())
+            {
+                Assert.AreEqual(2, dataFrame.columns.__len__().AsManagedObject(typeof(int)));
+                var count = dataFrame.__len__().AsManagedObject(typeof(int));
+                Assert.AreEqual(10, count);
+            }
+        }
+
         [TestCase("'SPY'", true)]
         [TestCase("symbol")]
         [TestCase("str(symbol.ID)")]
@@ -1238,6 +1278,28 @@ def Test(dataFrame, symbol):
         raise Exception('Data is zero')").GetAttr("Test");
 
                 Assert.DoesNotThrow(() => test(GetTestDataFrame(Symbols.SPY), Symbols.SPY));
+            }
+        }
+
+        [TestCase("'SPY'", true)]
+        [TestCase("symbol")]
+        [TestCase("str(symbol.ID)")]
+        public void BackwardsCompatibilityDataFrame_query_index(string index, bool cache = false)
+        {
+            if (cache) SymbolCache.Set("SPY", Symbols.SPY);
+
+            using (Py.GIL())
+            {
+                dynamic test = PythonEngine.ModuleFromString("testModule",
+                    $@"
+def Test(dataFrame, symbol):
+    time = '2011-02-01'
+    data = dataFrame.lastprice.unstack(0).query('index > @time')
+    data = data[{index}]
+    if data is 0:
+        raise Exception('Data is zero')").GetAttr("Test");
+
+                Assert.DoesNotThrow(() => test(GetTestDataFrame(Symbols.SPY, 10), Symbols.SPY));
             }
         }
 
@@ -3214,6 +3276,15 @@ def Test(dataFrame, symbol):
 
             public override BaseData Reader(SubscriptionDataConfig config, string line, DateTime date, bool isLiveMode) =>
                 new SubSubTradeBar((TradeBar) base.Reader(config, line, date, isLiveMode));
+        }
+
+        internal class NullableValueData : BaseData
+        {
+            public int? NullableInt { get; set; }
+
+            public DateTime? NullableTime { get; set; }
+
+            public double? NullableColumn { get; set; }
         }
     }
 }
