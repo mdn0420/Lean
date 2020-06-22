@@ -14,7 +14,9 @@
  *
 */
 
+using System;
 using System.Collections.Generic;
+using System.IO;
 using Newtonsoft.Json;
 using QuantConnect.Interfaces;
 
@@ -117,6 +119,12 @@ namespace QuantConnect.Packets
         public int StorageFileCount;
 
         /// <summary>
+        /// Holds the permissions for the object store
+        /// </summary>
+        [JsonProperty(PropertyName = "storagePermissions")]
+        public FileAccess StoragePermissions;
+
+        /// <summary>
         /// The interval over which the <see cref="IObjectStore"/> will persistence the contents of
         /// the object store
         /// </summary>
@@ -128,6 +136,12 @@ namespace QuantConnect.Packets
         /// </summary>
         [JsonProperty(PropertyName = "streamingDataPermissions")]
         public HashSet<string> StreamingDataPermissions;
+
+        /// <summary>
+        /// Gets list of allowed data resolutions
+        /// </summary>
+        [JsonProperty(PropertyName = "dataResolutionPermissions")]
+        public HashSet<Resolution> DataResolutionPermissions;
 
         /// <summary>
         /// Initializes a new default instance of the <see cref="Controls"/> class
@@ -148,11 +162,13 @@ namespace QuantConnect.Packets
             StorageLimitMB = 5;
             StorageFileCount = 100;
             PersistenceIntervalSeconds = 5;
+            StoragePermissions = FileAccess.ReadWrite;
 
             // initialize to default leaky bucket values in case they're not specified
             TrainingLimits = new LeakyBucketControlParameters();
 
             StreamingDataPermissions = new HashSet<string>();
+            DataResolutionPermissions = new HashSet<Resolution>();
         }
 
         /// <summary>
