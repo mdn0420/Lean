@@ -4,7 +4,7 @@
 [![Build Status](https://travis-ci.org/QuantConnect/Lean.svg?branch=feature%2Fremove-web-socket-4-net)](https://travis-ci.org/QuantConnect/Lean) &nbsp;&nbsp;&nbsp; [![LEAN Forum](https://img.shields.io/badge/debug-LEAN%20Forum-53c82b.svg)](https://www.quantconnect.com/forum) &nbsp;&nbsp;&nbsp; [![Slack Chat](https://img.shields.io/badge/chat-Slack-53c82b.svg)](https://www.quantconnect.com/slack)
 
 
-[Lean Home - https://www.quantconnect.com/lean][1] | [Documentation][2] | [Download Zip][3]
+[Lean Home - https://www.quantconnect.com/lean][1] | [Documentation][2] | [Download Zip][3] | [Docker Hub][8]
 
 ----------
 
@@ -113,7 +113,7 @@ If you get other errors that lead to the failure of your building, please refer 
 
 - Run the compiled `exe` file:
 ```
-cd Lean/Launcher/bin/Debug
+cd Launcher/bin/Debug
 mono ./QuantConnect.Lean.Launcher.exe
 ```
 - Interactive Brokers set up details
@@ -167,5 +167,5 @@ Ryan H, Pravin B, Jimmie B, Nick C, Sam C, Mattias S, Michael H, Mark M, Madhan,
   [5]: https://github.com/QuantConnect/Lean/issues
   [6]: https://www.quantconnect.com/forum/discussions/1/lean
   [7]: https://github.com/QuantConnect/Lean/blob/master/CONTRIBUTING.md
-  [8]: https://github.com/QuantConnect/Lean/blob/master/VisualStudioPlugin/readme.md
+  [8]: https://hub.docker.com/orgs/quantconnect/repositories
 
