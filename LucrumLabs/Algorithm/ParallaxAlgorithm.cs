@@ -8,11 +8,15 @@ using QuantConnect.Data.Consolidators;
 using QuantConnect.Data.Market;
 using QuantConnect.Indicators;
 using QuantConnect.Orders;
+using QuantConnect.Securities;
+using QuantConnect.Securities.Forex;
 
 namespace LucrumLabs.Algorithm
 {
     public class ParallaxAlgorithm : QCAlgorithm
     {
+        public static readonly decimal[] FibRetraceLevels = new[] {0.236m, 0.382m, 0.5m, 0.618m, 0.786m, 1m};
+        public static readonly decimal[] FibExtensionLevels = new[] {0m, -0.382m, -0.618m, -1m, -1.618m};
         /// <summary>
         /// Body of indecision bar should be less than this
         /// </summary>
@@ -26,11 +30,24 @@ namespace LucrumLabs.Algorithm
         /// <summary>
         /// Minimum distance from the edge of the bank for the indecision bar body
         /// </summary>
-        private const float IndecisionMinBBDistance = 0.8f;
+        private const float IndecisionMinBBDistance = 1f;
 
-        private const float SetupBodyRatioMin = 0.4f;
+        /// <summary>
+        /// Minimum ratio of body of setup candle
+        /// </summary>
+        private const float SetupBodyRatioMin = 0.2f;
+
+        /// <summary>
+        /// Minimum size of wick for setup bar in the trade direction, 1.0 disables this check
+        /// </summary>
+        private const float SetupWickRatioMin = 1f;
+
+        /// <summary>
+        /// Index to the Fib retracement array.
+        /// </summary>
+        private const int MaxSetupFibRetracement = 1;
         
-        private const string SYMBOL = "EURUSD";
+        private const string SYMBOL = "USDJPY";
 
         private RollingWindow<QuoteBar> _setupWindow = new RollingWindow<QuoteBar>(2);
         private RollingWindow<IndicatorDataPoint> _bbUpperWindow = new RollingWindow<IndicatorDataPoint>(2);
@@ -44,19 +61,26 @@ namespace LucrumLabs.Algorithm
         
         public override void Initialize()
         {
-            SetStartDate(2020, 04, 01);
-            SetEndDate(2020, 06, 30);
+            SetStartDate(2019, 01, 01);
+            SetEndDate(2020, 01, 01);
             SetCash(100000);
             
             SetBrokerageModel(BrokerageName.OandaBrokerage);
 
             AddForex(SYMBOL, Resolution.Minute, Market.Oanda);
+            Securities[SYMBOL].SetLeverage(20m);
+
+            TimeSpan timeFrame = TimeSpan.FromHours(1);
             
-            _stochastic = STO(SYMBOL, 14, 3, 3, Resolution.Hour);
-            _bb = BB(SYMBOL, 20, 2, MovingAverageType.Simple, Resolution.Hour);
+            _stochastic = new Stochastic(14, 3, 3);
+            //_stochastic = STO(SYMBOL, 14, 3, 3, Resolution.Hour);
+            RegisterIndicator(SYMBOL, _stochastic, timeFrame);
+            _bb = new BollingerBands(20, 2);
+            //_bb = BB(SYMBOL, 20, 2, MovingAverageType.Simple, Resolution.Hour);
+            RegisterIndicator(SYMBOL, _bb, timeFrame);
             
             // This needs to get created last so the bar gets processed after indicators are updated
-            var consolidator = new QuoteBarConsolidator(TimeSpan.FromMinutes(60));
+            var consolidator = new QuoteBarConsolidator(timeFrame);
             SubscriptionManager.AddConsolidator(SYMBOL, consolidator);
             consolidator.DataConsolidated += OnDataConsolidated;
         }
@@ -99,38 +123,49 @@ namespace LucrumLabs.Algorithm
                 _bbUpperWindow[1].Value, 
                 _bbLowerWindow[1].Value, 
                 _bbMidWindow[1].Value);
-            
-            /*
-            if (ibar != 0)
-            {
-                string direction = ibar == 1 ? "long" : "short";
-                Log(string.Format("{0} - {1} indecision bar", prevBar.Time, direction));
-            }*/
-            
+
+            var ibarBodyLength = prevBar.GetBodyTop() - prevBar.GetBodyBottom();
+            var setupBodyLength = thisBar.GetBodyTop() - thisBar.GetBodyBottom();
+
             var setupRatios = thisBar.GetBarRatios();
-            if (ibar != 0 && setupRatios.Body > SetupBodyRatioMin)
+            if (ibar != 0 && setupRatios.Body > SetupBodyRatioMin && setupBodyLength > ibarBodyLength)
             {
                 var stochK = _stochastic.StochK.Current.Value;
                 var stochD = _stochastic.StochD.Current.Value;
-                
+
+                var maxSetupRetrace = FibRetraceLevels[MaxSetupFibRetracement];
                 // long setup
                 if (ibar == 1 && 
-                    thisBar.Close > prevBar.Close && 
-                    thisBar.High > prevBar.High &&
-                    stochK <= 25 &&
-                    stochD <= 25)
+                    thisBar.Close > prevBar.Close &&  // higher close
+                    thisBar.High > prevBar.High && // higher high
+                    stochK <= 25 && // Stoch showing oversold
+                    stochD <= 25 &&
+                    // Didn't retrace too far on close
+                    thisBar.Close > MathUtils.GetFibPrice(thisBar.Low, thisBar.High, maxSetupRetrace) &&
+                    setupRatios.Top < SetupWickRatioMin) // Small wick in direction of trade
                 {
-                    Debug(string.Format("{0} LONG setup: C: {1}, K/D: {2:N3}/{3:N3}", 
-                        thisBar.Time, thisBar.Close, stochK, stochD));
+                    Console.WriteLine(
+                        "{0} LONG setup: H/L: {1}/{2}",
+                        thisBar.Time,
+                        thisBar.High,
+                        thisBar.Low
+                    );
                     TryOpenTrade(thisBar, OrderDirection.Buy);
                 }
                 else if (ibar == -1 && 
                          thisBar.Close < prevBar.Close &&
                          thisBar.Low < prevBar.Low &&
                          stochK >= 75 &&
-                         stochD >= 75)
+                         stochD >= 75 &&
+                         thisBar.Close < MathUtils.GetFibPrice(thisBar.High, thisBar.Low, maxSetupRetrace) &&
+                         setupRatios.Bottom < SetupWickRatioMin)
                 {
-                    Debug(string.Format("{0} SHORT setup: C: {1}, K/D: {2:N3}/{3:N3}", thisBar.Time, thisBar.Close, stochK, stochD));
+                    Console.WriteLine(
+                        "{0} SHORT setup: H/L: {1}/{2}",
+                        thisBar.Time,
+                        thisBar.High,
+                        thisBar.Low
+                    );
                     TryOpenTrade(thisBar, OrderDirection.Sell);
                 }
             }
@@ -143,7 +178,7 @@ namespace LucrumLabs.Algorithm
             {
                 return;
             }
-            
+
             ParallaxTrade trade = _activeTrades[symbol] = new ParallaxTrade(this, setupBar, symbol.Value, direction);
             trade.PlaceOrders();
         }
@@ -177,11 +212,8 @@ namespace LucrumLabs.Algorithm
 
             if (ratios.Body < IndecisionBodyRatioMax)
             {
-                var bodyTop = bar.GetBodyTop();
-                var bodyBottom = bar.GetBodyBottom();
-
-                var bbTopLerp = (float)MathUtils.InvLerp(bbMid, bbUpper, bodyTop);
-                var bbBottomLerp = (float)MathUtils.InvLerp(bbMid, bbLower, bodyBottom);
+                var bbTopLerp = (float)MathUtils.InvLerp(bbMid, bbUpper, bar.High);
+                var bbBottomLerp = (float)MathUtils.InvLerp(bbMid, bbLower, bar.Low);
 
                 // Long indecision bar
                 if (ratios.Bottom > IndecisionWickRatioMin && bbBottomLerp >= IndecisionMinBBDistance)
@@ -223,6 +255,36 @@ namespace LucrumLabs.Algorithm
             }
             
             CleanupTrades();
+        }
+
+        public int CalculatePositionSize(Forex pair, decimal pips, decimal balance, decimal riskPercent)
+        {
+            var quoteCurrency = pair.QuoteCurrency;
+
+            int lotSize = 0;
+            decimal pipSize = ForexUtils.GetPipSize(quoteCurrency.Symbol);
+
+            if (quoteCurrency.ConversionRate <= 0m)
+            {
+                Error("Could not find account conversion rate when calculating position size");
+                return 0;
+            }
+            
+            // risk amount in the quote currency
+            decimal riskAmount = balance * riskPercent / quoteCurrency.ConversionRate;
+
+            decimal unitsPerCurrency = 1m / pipSize;
+            var pipValue = riskAmount / pips;
+            lotSize = (int)(pipValue * unitsPerCurrency);
+
+            //Debug(string.Format("Lot size: {0}, Risk: {1:P1}, Balance: {2:C}, Price: {3}, ConversionRate: {4}", lotSize, riskPercent, balance, pair.Price, quoteCurrency.ConversionRate));
+            return lotSize;
+        }
+
+        public void PrintBalance()
+        {
+            var portfolio = Portfolio;
+            Console.WriteLine("Equity: {0:C}, Margin Used/Remaining: {1:C}/{2:C}", portfolio.TotalPortfolioValue, portfolio.TotalMarginUsed, portfolio.MarginRemaining);
         }
     }
 }

@@ -48,6 +48,7 @@
     <Compile Include="Algorithm\ParallaxTrade.cs" />
     <Compile Include="Algorithm\ParallaxAlgorithm.cs" />
     <Compile Include="BarUtils.cs" />
+    <Compile Include="ForexUtils.cs" />
     <Compile Include="MathUtils.cs" />
     <Compile Include="TestAlgorithm.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

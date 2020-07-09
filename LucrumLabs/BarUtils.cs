@@ -20,6 +20,12 @@ namespace LucrumLabs
             var close = bar.Close;
             
             decimal length = high - low;
+
+            if (length <= 0m)
+            {
+                return new BarRatios();
+            }
+            
             decimal bodyTop = Math.Max(open, close);
             decimal bodyBottom = Math.Min(open, close);
 

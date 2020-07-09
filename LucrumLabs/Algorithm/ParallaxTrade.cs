@@ -1,9 +1,11 @@
 using System;
 using System.Diagnostics;
+using System.Linq;
 using QuantConnect;
 using QuantConnect.Data.Market;
 using QuantConnect.Orders;
 using QuantConnect.Securities;
+using QuantConnect.Securities.Forex;
 
 namespace LucrumLabs.Algorithm
 {
@@ -16,14 +18,31 @@ namespace LucrumLabs.Algorithm
             CLOSED
         }
 
+        private const decimal StopLossFibLevel = 0.786m;
+
+        private const decimal TakeProfitFibLevel = -1.618m;
+
+        /// <summary>
+        /// If price hits this extension level before entry is filled, cancel the trade
+        /// </summary>
+        private const decimal ExpireFibLevel = -0.382m;
+
+        private bool activeTradeManagementEnabled = true;
+
         public TradeState State => _state;
         private TradeState _state = TradeState.PENDING;
         
         private ParallaxAlgorithm _algorithm;
+
+        private decimal _entryPrice;
+        private decimal _slPrice;
+        private decimal _tpPrice;
         
         private OrderTicket _entryOrder;
         private OrderTicket _tpOrder;
         private OrderTicket _slOrder;
+
+        private int _slLlevel = -1;
 
         private QuoteBar _setupBar;
         private OrderDirection _direction;
@@ -39,10 +58,8 @@ namespace LucrumLabs.Algorithm
             _setupBar = setupBar;
             _symbol = symbol;
             _direction = direction;
-            
-            // todo: calculate lot size
-            _lotSize = 100000;
 
+            CalculatePrices();
             const decimal extensionFibLevel = -0.382m;
             if (direction == OrderDirection.Buy)
             {
@@ -54,6 +71,54 @@ namespace LucrumLabs.Algorithm
             }
         }
 
+        /// <summary>
+        /// Calculate the order prices
+        /// </summary>
+        private void CalculatePrices()
+        {
+            Forex pair = _algorithm.Securities[_symbol] as Forex;
+
+            // risk amount in pips
+            decimal pipSize = ForexUtils.GetPipSize(pair.QuoteCurrency.Symbol);
+            decimal entryFib1 = ParallaxAlgorithm.FibRetraceLevels[0];
+            decimal entryFib2 = ParallaxAlgorithm.FibRetraceLevels[1];
+            if (_direction == OrderDirection.Buy)
+            {
+                _entryPrice = GetFibPrice(entryFib1);
+                if (_setupBar.Close < _entryPrice)
+                {
+                    _entryPrice = GetFibPrice(entryFib2);
+                }
+                _slPrice = GetFibPrice(StopLossFibLevel);
+                _tpPrice = GetFibPrice(TakeProfitFibLevel);
+                _extensionPrice = GetFibPrice(ExpireFibLevel);
+            }
+            else
+            {
+                _entryPrice = GetFibPrice(entryFib1);
+                if (_setupBar.Close > _entryPrice)
+                {
+                    _entryPrice = GetFibPrice(entryFib2);
+                }
+                _slPrice = GetFibPrice(StopLossFibLevel);
+                _tpPrice = GetFibPrice(TakeProfitFibLevel);
+                _extensionPrice = GetFibPrice(ExpireFibLevel);
+            }
+
+            var pipRisk = Math.Abs(_entryPrice - _slPrice) / pipSize;
+            _lotSize = _algorithm.CalculatePositionSize(pair, pipRisk, _algorithm.Portfolio.MarginRemaining, 0.0025m);
+            if (_direction == OrderDirection.Sell)
+            {
+                _lotSize = -_lotSize;
+            }
+            
+            RoundPrice(ref _entryPrice);
+            RoundPrice(ref _slPrice);
+            RoundPrice(ref _tpPrice);
+            
+            Console.WriteLine("{0} - Setting up trade, entry: {1}, sl: {2}, tp: {3}, units: {4:N0}", _algorithm.Time, _entryPrice, _slPrice, _tpPrice, _lotSize);
+        }
+
         public void PlaceOrders()
         {
             if (_entryOrder != null)
@@ -62,53 +127,15 @@ namespace LucrumLabs.Algorithm
                 return;
             }
             
-            decimal entryFibLevel = 0.236m;
-            decimal entryPrice;
-            decimal spread = _setupBar.Ask.Close - _setupBar.Bid.Close;
-            int lotSize;
-            if (_direction == OrderDirection.Buy)
-            {
-                entryPrice = MathUtils.GetFibPrice(_setupBar.Low, _setupBar.High, entryFibLevel) - spread;
-                lotSize = _lotSize;
-            }
-            else
-            {
-                entryPrice = MathUtils.GetFibPrice(_setupBar.High, _setupBar.Low, entryFibLevel) + spread;
-                lotSize = -_lotSize;
-            }
-            
-            RoundPrice(ref entryPrice);
-            
-            //_algorithm.Debug(string.Format("Placing limit order for {0} at {1}", _symbol, entryPrice));
-            
-            _entryOrder = _algorithm.LimitOrder(_symbol, lotSize, entryPrice);
+            //_algorithm.Debug(string.Format("{0} - Placing limit entry order for {1:N0} {2} at {3}", _algorithm.Time, _lotSize, _symbol, _entryPrice));
+            _entryOrder = _algorithm.LimitOrder(_symbol, _lotSize, _entryPrice);
         }
 
         private void PlaceManagementOrders()
         {
-            decimal slFiblevel = 0.618m;
-            decimal tpFibLevel = -0.618m;
-            decimal slPrice, tpPrice;
-            int lotSize;
-            if (_direction == OrderDirection.Buy)
-            {
-                slPrice = MathUtils.GetFibPrice(_setupBar.Low, _setupBar.High, slFiblevel);
-                tpPrice = MathUtils.GetFibPrice(_setupBar.Low, _setupBar.High, tpFibLevel);
-                lotSize = _lotSize;
-            }
-            else
-            {
-                slPrice = MathUtils.GetFibPrice(_setupBar.High, _setupBar.Low, slFiblevel);
-                tpPrice = MathUtils.GetFibPrice(_setupBar.High, _setupBar.Low, tpFibLevel);
-                lotSize = -_lotSize;
-            }
-            
-            RoundPrice(ref slPrice);
-            RoundPrice(ref tpPrice);
-            
             //_algorithm.Debug(string.Format("Opening orders - SL: {0}, TP: {1}", slPrice, tpPrice));
-            _tpOrder = _algorithm.LimitOrder(_symbol, -lotSize, tpPrice, string.Format("tp:{0}", _entryOrder.OrderId));
-            _slOrder = _algorithm.StopMarketOrder(_symbol, -lotSize, slPrice, string.Format("sl:{0}", _entryOrder.OrderId));
+            _tpOrder = _algorithm.LimitOrder(_symbol, -_lotSize, _tpPrice, string.Format("tp:{0}", _entryOrder.OrderId));
+            _slOrder = _algorithm.StopMarketOrder(_symbol, -_lotSize, _slPrice, string.Format("sl:{0}", _entryOrder.OrderId));
         }
 
         private void RoundPrice(ref decimal value)
@@ -144,13 +171,19 @@ namespace LucrumLabs.Algorithm
                 if (orderEvent.Status == OrderStatus.Filled)
                 {
                     // Setup TP/SL orders
-                    _algorithm.Log(string.Format("{0} - Entered {1} trade for {2} at {3}", _algorithm.Time, _direction, _symbol, orderEvent.FillPrice));
+                    Console.WriteLine("{0} - Entered {1} trade for {2:N0} {3} @ {4}", _algorithm.Time, _direction, orderEvent.Quantity, _symbol, orderEvent.FillPrice);
                     _state = TradeState.OPEN;
+                    _algorithm.PrintBalance();
                     PlaceManagementOrders();
                 } 
                 else if (orderEvent.Status == OrderStatus.Canceled)
                 {
-                    _algorithm.Log(string.Format("{0} - Trade for {1} cancelled", _algorithm.Time, _symbol));
+                    Console.WriteLine("{0} - Trade for {1} cancelled", _algorithm.Time, _symbol);
+                    CloseTrade();
+                }
+                else if (orderEvent.Status == OrderStatus.Invalid)
+                {
+                    Console.WriteLine("Entry order invalid");
                     CloseTrade();
                 }
             }
@@ -158,7 +191,13 @@ namespace LucrumLabs.Algorithm
             {
                 if (orderEvent.Status == OrderStatus.Filled)
                 {
-                    _algorithm.Log(string.Format("{0} - Stop loss hit for {1} at {2}", _algorithm.Time, _symbol, orderEvent.FillPrice));
+                    Console.WriteLine(
+                        "{0} - Stop loss hit for {1} at {2} - P/L: {3}",
+                        _algorithm.Time,
+                        _symbol,
+                        orderEvent.FillPrice,
+                        GetLastTradeProfitLoss()
+                    );
                     CloseTrade();
                 }
             }
@@ -166,13 +205,12 @@ namespace LucrumLabs.Algorithm
             {
                 if (orderEvent.Status == OrderStatus.Filled)
                 {
-                    _algorithm.Log(
-                        string.Format(
-                            "{0} - Take profit hit for {1} at {2}",
+                    Console.WriteLine(
+                            "{0} - Take profit hit for {1} at {2} - P/L: {3}",
                             _algorithm.Time,
                             _symbol,
-                            orderEvent.FillPrice
-                        )
+                            orderEvent.FillPrice,
+                            GetLastTradeProfitLoss()
                     );
                     CloseTrade();
                 }
@@ -183,38 +221,137 @@ namespace LucrumLabs.Algorithm
             }
         }
 
+        private string GetLastTradeProfitLoss()
+        {
+            var lastTrade = _algorithm.TradeBuilder.ClosedTrades.Last();
+            return lastTrade != null ? lastTrade.ProfitLoss.ToString("C") : "NA";
+        }
+
+        /// <summary>
+        /// Helper method to calculate fib price based on direction
+        /// </summary>
+        /// <param name="fibValue"></param>
+        /// <returns></returns>
+        private decimal GetFibPrice(decimal fibValue)
+        {
+            if (_direction == OrderDirection.Buy)
+            {
+                return MathUtils.GetFibPrice(_setupBar.Low, _setupBar.High, fibValue);
+            }
+            
+            return MathUtils.GetFibPrice(_setupBar.High, _setupBar.Low, fibValue);
+        }
+
         public void OnDataUpdate(QuoteBar bar)
         {
             if (_state != TradeState.OPEN)
             {
                 // Cancel order if we haven't filled and we already hit the first extension level
                 var price = bar.Price;
-                if (_direction == OrderDirection.Buy && price > _extensionPrice)
+                bool cancelFromExtension = (_direction == OrderDirection.Buy && price > _extensionPrice) || 
+                                           (_direction == OrderDirection.Sell && price < _extensionPrice);
+                if (cancelFromExtension)
                 {
-                    CloseTrade();
-                } 
-                else if (_direction == OrderDirection.Sell && price < _extensionPrice)
-                {
+                    Console.WriteLine("{0} - Price ran to extension before entry order filled.. cancelling trade.", _algorithm.Time);
                     CloseTrade();
                 }
+            }
+            else if (_state == TradeState.OPEN)
+            {
+                if (activeTradeManagementEnabled)
+                {
+                    var price = bar.Price;
+                    if (_slLlevel < 0)
+                    {
+                        // -38.2
+                        var fibPrice = GetFibPrice(ParallaxAlgorithm.FibExtensionLevels[1]);
+                        if (_direction == OrderDirection.Buy && price > fibPrice ||
+                            _direction == OrderDirection.Sell && price < fibPrice)
+                        {
+                            MoveUpStopLoss();
+                        }
+                    }
+                    else if (_slLlevel == 0)
+                    {
+                        // -61.8
+                        var fibPrice = GetFibPrice(ParallaxAlgorithm.FibExtensionLevels[2]);
+                        if (_direction == OrderDirection.Buy && price > fibPrice ||
+                            _direction == OrderDirection.Sell && price < fibPrice)
+                        {
+                            MoveUpStopLoss();
+                        }
+                    }
+                    else if (_slLlevel == 1)
+                    {
+                        // -1
+                        var fibPrice = GetFibPrice(ParallaxAlgorithm.FibExtensionLevels[3]);
+                        if (_direction == OrderDirection.Buy && price > fibPrice ||
+                            _direction == OrderDirection.Sell && price < fibPrice)
+                        {
+                            MoveUpStopLoss();
+                        }
+                    }
+                    else if (_slLlevel == 2)
+                    {
+                        // -1
+                        var fibPrice = GetFibPrice(ParallaxAlgorithm.FibExtensionLevels[4]);
+                        if (_direction == OrderDirection.Buy && price > fibPrice ||
+                            _direction == OrderDirection.Sell && price < fibPrice)
+                        {
+                            MoveUpStopLoss();
+                        }
+                    }
+                }
+            }
+        }
+
+        private void MoveUpStopLoss()
+        {
+            _slLlevel++;
+            decimal newStopPrice = -1m;
+            if (_slLlevel == 0)
+            {
+                // move to break even
+                // todo: may need to adjust price since LEAN is counting these as losses
+                newStopPrice = _entryOrder.AverageFillPrice;
+            }
+            else if (_slLlevel > 0 && _slLlevel < ParallaxAlgorithm.FibExtensionLevels.Length)
+            {
+                newStopPrice = GetFibPrice(ParallaxAlgorithm.FibExtensionLevels[_slLlevel]);
+            }
+            else
+            {
+                _algorithm.Error("Unexpected level to move stop loss to");
+            }
+
+            if (newStopPrice > 0m)
+            {
+                RoundPrice(ref newStopPrice);
+                Console.WriteLine("{0} - Moving stop loss to {1}", _algorithm.Time, newStopPrice);
+                _slOrder.UpdateStopPrice(newStopPrice);
             }
         }
 
         private void CloseTrade()
         {
-            if (_entryOrder != null && _entryOrder.QuantityFilled == 0)
+            if (_entryOrder != null && !_entryOrder.Status.IsClosed())
             {
                 _entryOrder.Cancel();
             }
 
-            if (_slOrder != null && _slOrder.QuantityFilled == 0)
+            if (_slOrder != null && !_slOrder.Status.IsClosed())
             {
                 _slOrder.Cancel();
             }
             
-            if (_tpOrder != null && _tpOrder.QuantityFilled == 0)
+            if (_tpOrder != null && !_tpOrder.Status.IsClosed())
             {
                 _tpOrder.Cancel();
+            }
+
+            if (_state == TradeState.OPEN)
+            {
+                _algorithm.PrintBalance();
             }
             _state = TradeState.CLOSED;
         }
