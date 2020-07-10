@@ -70,25 +70,57 @@ namespace LucrumLabs.Algorithm
             AddForex(SYMBOL, Resolution.Minute, Market.Oanda);
             Securities[SYMBOL].SetLeverage(20m);
 
-            TimeSpan timeFrame = TimeSpan.FromHours(1);
+            TimeSpan timeFrame = TimeSpan.FromHours(4);
+
+            var consolidator = new QuoteBarConsolidator(NewYorkClosePeriod(timeFrame));
+            SubscriptionManager.AddConsolidator(SYMBOL, consolidator);
             
             _stochastic = new Stochastic(14, 3, 3);
-            //_stochastic = STO(SYMBOL, 14, 3, 3, Resolution.Hour);
-            RegisterIndicator(SYMBOL, _stochastic, timeFrame);
             _bb = new BollingerBands(20, 2);
-            //_bb = BB(SYMBOL, 20, 2, MovingAverageType.Simple, Resolution.Hour);
-            RegisterIndicator(SYMBOL, _bb, timeFrame);
+            RegisterIndicator(SYMBOL, _stochastic, consolidator);
+            RegisterIndicator(SYMBOL, _bb, consolidator);
             
-            // This needs to get created last so the bar gets processed after indicators are updated
-            var consolidator = new QuoteBarConsolidator(timeFrame);
-            SubscriptionManager.AddConsolidator(SYMBOL, consolidator);
+            // This needs to get added last so the bar gets processed after indicators are updated
             consolidator.DataConsolidated += OnDataConsolidated;
+        }
+
+        /// <summary>
+        /// Calculates period aligned with NY session close time
+        /// </summary>
+        /// <param name="period"></param>
+        /// <returns></returns>
+        private Func<DateTime, CalendarInfo> NewYorkClosePeriod(TimeSpan period)
+        {
+            return dt =>
+            {
+                // Find the next NY closing time
+                var nyc = dt.ConvertTo(TimeZone, TimeZones.NewYork).RoundUp(TimeSpan.FromHours(1));
+                int closeHour = 17; // 5pm
+                if (nyc.Hour <= closeHour)
+                {
+                    nyc = nyc.AddHours(closeHour - nyc.Hour);
+                }
+                else
+                {
+                    nyc = nyc.AddHours(closeHour + (24 - nyc.Hour));
+                }
+
+                // walk backwards until we find the period this time is in
+                DateTime periodStart = nyc.ConvertTo(TimeZones.NewYork, TimeZone);
+                while (dt < periodStart)
+                {
+                    periodStart = periodStart.Subtract(period);
+                }
+            
+                var result = new CalendarInfo(periodStart, period);
+                return result;
+            };
         }
 
         private void OnDataConsolidated(object sender, QuoteBar bar)
         {
             /*
-            Log(string.Format("{0} - Stoch: {1}/{2}, BB: {3}/{4}", 
+            Log(string.Format("{0} - Stoch: {1:F3}/{2:F3}, BB: {3:F5}/{4:F5}", 
                 bar.Time.ToString(), 
                 _stochastic.StochK.Current.Value,
                 _stochastic.StochD.Current.Value,

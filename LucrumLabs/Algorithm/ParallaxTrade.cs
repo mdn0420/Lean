@@ -126,6 +126,13 @@ namespace LucrumLabs.Algorithm
                 _algorithm.Error("Tried to place duplicate trade");
                 return;
             }
+
+            if (_lotSize == 0)
+            {
+                _algorithm.Error("Calculated lot size of 0.. cancelling trade");
+                CloseTrade();
+                return;
+            }
             
             //_algorithm.Debug(string.Format("{0} - Placing limit entry order for {1:N0} {2} at {3}", _algorithm.Time, _lotSize, _symbol, _entryPrice));
             _entryOrder = _algorithm.LimitOrder(_symbol, _lotSize, _entryPrice);
