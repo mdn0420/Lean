@@ -46,8 +46,10 @@ namespace LucrumLabs.Algorithm
         /// Index to the Fib retracement array.
         /// </summary>
         private const int MaxSetupFibRetracement = 1;
+
+        private TimeSpan TradingTimeFrame = TimeSpan.FromHours(4);
         
-        private const string SYMBOL = "USDJPY";
+        private const string SYMBOL = "EURUSD";
 
         private RollingWindow<QuoteBar> _setupWindow = new RollingWindow<QuoteBar>(2);
         private RollingWindow<IndicatorDataPoint> _bbUpperWindow = new RollingWindow<IndicatorDataPoint>(2);
@@ -68,11 +70,9 @@ namespace LucrumLabs.Algorithm
             SetBrokerageModel(BrokerageName.OandaBrokerage);
 
             AddForex(SYMBOL, Resolution.Minute, Market.Oanda);
-            Securities[SYMBOL].SetLeverage(20m);
+            Securities[SYMBOL].SetLeverage(20m);    
 
-            TimeSpan timeFrame = TimeSpan.FromHours(4);
-
-            var consolidator = new QuoteBarConsolidator(NewYorkClosePeriod(timeFrame));
+            var consolidator = new QuoteBarConsolidator(NewYorkClosePeriod(TradingTimeFrame));
             SubscriptionManager.AddConsolidator(SYMBOL, consolidator);
             
             _stochastic = new Stochastic(14, 3, 3);
