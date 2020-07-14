@@ -78,6 +78,8 @@ namespace LucrumLabs.Algorithm
         {
             Forex pair = _algorithm.Securities[_symbol] as Forex;
 
+            // todo: check margin requirements based on risk amount, small stop loss will require large position size
+            
             // risk amount in pips
             decimal pipSize = ForexUtils.GetPipSize(pair.QuoteCurrency.Symbol);
             decimal entryFib1 = ParallaxAlgorithm.FibRetraceLevels[0];
@@ -136,6 +138,12 @@ namespace LucrumLabs.Algorithm
             
             //_algorithm.Debug(string.Format("{0} - Placing limit entry order for {1:N0} {2} at {3}", _algorithm.Time, _lotSize, _symbol, _entryPrice));
             _entryOrder = _algorithm.LimitOrder(_symbol, _lotSize, _entryPrice);
+            if (_entryOrder.Status == OrderStatus.Invalid)
+            {
+                // something wrong
+                _algorithm.Error("Something was wrong with entry order.. cancelling trade");
+                CloseTrade();
+            }
         }
 
         private void PlaceManagementOrders()

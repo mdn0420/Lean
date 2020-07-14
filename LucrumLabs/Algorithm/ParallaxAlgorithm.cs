@@ -43,13 +43,18 @@ namespace LucrumLabs.Algorithm
         private const float SetupWickRatioMin = 1f;
 
         /// <summary>
+        /// How large the setup bar needs to be relative to the ATR, 0 disables this
+        /// </summary>
+        private const decimal SetupBarLengthATRScale = 0.2m;
+
+        /// <summary>
         /// Index to the Fib retracement array.
         /// </summary>
         private const int MaxSetupFibRetracement = 1;
 
         private TimeSpan TradingTimeFrame = TimeSpan.FromHours(4);
         
-        private const string SYMBOL = "EURUSD";
+        private const string SYMBOL = "USDJPY";
 
         private RollingWindow<QuoteBar> _setupWindow = new RollingWindow<QuoteBar>(2);
         private RollingWindow<IndicatorDataPoint> _bbUpperWindow = new RollingWindow<IndicatorDataPoint>(2);
@@ -60,11 +65,12 @@ namespace LucrumLabs.Algorithm
         
         private Stochastic _stochastic;
         private BollingerBands _bb;
+        private AverageTrueRange _atr;
         
         public override void Initialize()
         {
-            SetStartDate(2019, 01, 01);
-            SetEndDate(2020, 01, 01);
+            SetStartDate(2019, 1, 1);
+            SetEndDate(2019, 12, 31);
             SetCash(100000);
             
             SetBrokerageModel(BrokerageName.OandaBrokerage);
@@ -77,8 +83,10 @@ namespace LucrumLabs.Algorithm
             
             _stochastic = new Stochastic(14, 3, 3);
             _bb = new BollingerBands(20, 2);
+            _atr = new AverageTrueRange(14, MovingAverageType.Simple);
             RegisterIndicator(SYMBOL, _stochastic, consolidator);
             RegisterIndicator(SYMBOL, _bb, consolidator);
+            RegisterIndicator(SYMBOL, _atr, consolidator);
             
             // This needs to get added last so the bar gets processed after indicators are updated
             consolidator.DataConsolidated += OnDataConsolidated;
@@ -158,6 +166,11 @@ namespace LucrumLabs.Algorithm
 
             var ibarBodyLength = prevBar.GetBodyTop() - prevBar.GetBodyBottom();
             var setupBodyLength = thisBar.GetBodyTop() - thisBar.GetBodyBottom();
+
+            if (thisBar.High - thisBar.Close < _atr * SetupBarLengthATRScale)
+            {
+                return;
+            }
 
             var setupRatios = thisBar.GetBarRatios();
             if (ibar != 0 && setupRatios.Body > SetupBodyRatioMin && setupBodyLength > ibarBodyLength)
