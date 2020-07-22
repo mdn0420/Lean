@@ -108,7 +108,7 @@ namespace LucrumLabs.Algorithm
             }
 
             var pipRisk = Math.Abs(_entryPrice - _slPrice) / pipSize;
-            _lotSize = _algorithm.CalculatePositionSize(pair, pipRisk, _algorithm.Portfolio.MarginRemaining, 0.0025m);
+            _lotSize = _algorithm.CalculatePositionSize(pair, pipRisk, _algorithm.Portfolio.MarginRemaining, 0.01m);
             if (_direction == OrderDirection.Sell)
             {
                 _lotSize = -_lotSize;
@@ -117,8 +117,9 @@ namespace LucrumLabs.Algorithm
             RoundPrice(ref _entryPrice);
             RoundPrice(ref _slPrice);
             RoundPrice(ref _tpPrice);
-            
-            Console.WriteLine("{0} - Setting up trade, entry: {1}, sl: {2}, tp: {3}, units: {4:N0}", _algorithm.Time, _entryPrice, _slPrice, _tpPrice, _lotSize);
+
+            var tlPips = Math.Abs(_entryPrice - _tpPrice) / pipSize;
+            Console.WriteLine("{0} - Setting up trade, entry: {1}, sl: {2} ({3:F1}), tp: {4} ({5:F1}), units: {6:N0}", _algorithm.Time, _entryPrice, _slPrice, pipRisk, _tpPrice, tlPips, _lotSize);
         }
 
         public void PlaceOrders()
@@ -188,7 +189,7 @@ namespace LucrumLabs.Algorithm
                     // Setup TP/SL orders
                     Console.WriteLine("{0} - Entered {1} trade for {2:N0} {3} @ {4}", _algorithm.Time, _direction, orderEvent.Quantity, _symbol, orderEvent.FillPrice);
                     _state = TradeState.OPEN;
-                    _algorithm.PrintBalance();
+                    //_algorithm.PrintBalance();
                     PlaceManagementOrders();
                 } 
                 else if (orderEvent.Status == OrderStatus.Canceled)

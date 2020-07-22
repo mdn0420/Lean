@@ -5,9 +5,9 @@ namespace LucrumLabs
 {
     public struct BarRatios
     {
-        public float Top;
-        public float Body;
-        public float Bottom;
+        public decimal Top;
+        public decimal Body;
+        public decimal Bottom;
     }
     
     public static class BarUtils
@@ -31,9 +31,9 @@ namespace LucrumLabs
 
             var ratios = new BarRatios()
             {
-                Top = (float)((high - bodyTop) / length),
-                Body = (float)((bodyTop - bodyBottom) / length),
-                Bottom = (float)((bodyBottom - low) / length)
+                Top = (high - bodyTop) / length,
+                Body = (bodyTop - bodyBottom) / length,
+                Bottom = (bodyBottom - low) / length
             };
             return ratios;
         }
@@ -46,6 +46,11 @@ namespace LucrumLabs
         public static decimal GetBodyBottom(this QuoteBar bar)
         {
             return Math.Min(bar.Open, bar.Close);
+        }
+
+        public static decimal GetSpread(this QuoteBar bar)
+        {
+            return bar.Ask.Close - bar.Bid.Close;
         }
     }
 }
