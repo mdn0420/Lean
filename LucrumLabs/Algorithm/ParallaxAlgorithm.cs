@@ -1,16 +1,19 @@
+//#define DEBUG_PRINT_BARS
+
 using System;
 using System.Collections.Generic;
-using System.Data;
+using System.IO;
 using LucrumLabs.Data;
+using Newtonsoft.Json;
 using QuantConnect;
 using QuantConnect.Algorithm;
 using QuantConnect.Brokerages;
+using QuantConnect.Configuration;
 using QuantConnect.Data;
 using QuantConnect.Data.Consolidators;
 using QuantConnect.Data.Market;
 using QuantConnect.Indicators;
 using QuantConnect.Orders;
-using QuantConnect.Securities;
 using QuantConnect.Securities.Forex;
 
 namespace LucrumLabs.Algorithm
@@ -59,8 +62,8 @@ namespace LucrumLabs.Algorithm
         /// </summary>
         private const int MaxSetupFibRetracement = 1;
 
-        private TimeSpan TradingTimeFrame = TimeSpan.FromHours(24);
-        
+        private TimeSpan TradingTimeFrame = TimeSpan.FromHours(4);
+
         private const string SYMBOL = "USDCAD";
 
         private RollingWindow<QuoteBar> _setupWindow = new RollingWindow<QuoteBar>(2);
@@ -69,6 +72,8 @@ namespace LucrumLabs.Algorithm
         private RollingWindow<IndicatorDataPoint> _bbMidWindow = new RollingWindow<IndicatorDataPoint>(2);
 
         private Dictionary<Symbol, ParallaxTrade> _activeTrades = new Dictionary<Symbol, ParallaxTrade>();
+
+        private AlgorithmResults _results = new AlgorithmResults();
         
         private Stochastic _stochastic;
         private BollingerBands _bb;
@@ -76,18 +81,20 @@ namespace LucrumLabs.Algorithm
         
         public override void Initialize()
         {
-            SetStartDate(2019, 1, 1);
+            var tfName = TradingTimeFrame.Hours == 24 ? "D1" : $"H{TradingTimeFrame.Hours}";
+            SetAlgorithmId($"{AlgorithmId}-{SYMBOL}-{tfName}");
+            SetStartDate(2017, 1, 1);
             SetEndDate(2019, 12, 31);
             SetCash(100000);
             
             SetBrokerageModel(BrokerageName.OandaBrokerage);
-            
+
             AddForex(SYMBOL, Resolution.Minute, Market.Oanda);
-            Securities[SYMBOL].SetLeverage(20m);    
+            Securities[SYMBOL].SetLeverage(50m);
 
             var consolidator = new SmoothQuoteBarConsolidator(NewYorkClosePeriod(TradingTimeFrame));
             SubscriptionManager.AddConsolidator(SYMBOL, consolidator);
-            
+
             _stochastic = new Stochastic(14, 3, 3);
             _bb = new BollingerBands(20, 2);
             _atr = new AverageTrueRange(14, MovingAverageType.Simple);
@@ -135,7 +142,7 @@ namespace LucrumLabs.Algorithm
 
         private void OnDataConsolidated(object sender, QuoteBar bar)
         {
-            
+            #if DEBUG_PRINT_BARS   
             string debugStr = string.Format(
                 "Consolidated: {0} - O:{1:F5} H:{2:F5} L:{3:F5} C:{4:F5} ",
                 bar.Time.ToString(),
@@ -146,6 +153,7 @@ namespace LucrumLabs.Algorithm
             );
             debugStr += string.Format("BBMid:{0:F5} Up: {1:F5} Low: {2:F5}", _bb.MiddleBand, _bb.UpperBand, _bb.LowerBand);
             Console.WriteLine(debugStr);
+            #endif
                 
 
             if (!_bb.IsReady || !_stochastic.IsReady)
@@ -153,6 +161,16 @@ namespace LucrumLabs.Algorithm
                 return;
             }
 
+            var data = new ResultBarData(bar, TimeZone)
+            {
+                BBMid = _bb.MiddleBand,
+                BBUpper = _bb.UpperBand,
+                BBLower = _bb.LowerBand,
+                StochD = _stochastic.StochD,
+                StochK = _stochastic.StochK
+            };
+            _results.BarData.Add(data);
+            
             _setupWindow.Add(bar);
             _bbUpperWindow.Add(_bb.UpperBand.Current);
             _bbLowerWindow.Add(_bb.LowerBand.Current);
@@ -209,7 +227,7 @@ namespace LucrumLabs.Algorithm
                 {
                     Console.WriteLine(
                         "{0} LONG setup: H/L: {1}/{2}, spread: {3}",
-                        thisBar.EndTime,
+                        thisBar.Time,
                         thisBar.High,
                         thisBar.Low,
                         spread
@@ -226,7 +244,7 @@ namespace LucrumLabs.Algorithm
                 {
                     Console.WriteLine(
                         "{0} SHORT setup: H/L: {1}/{2}, spread: {3}",
-                        thisBar.EndTime,
+                        thisBar.Time,
                         thisBar.High,
                         thisBar.Low,
                         spread
@@ -261,6 +279,9 @@ namespace LucrumLabs.Algorithm
 
             foreach (var symbol in remove)
             {
+                var trade = _activeTrades[symbol];
+                TradeSetupData setupData = trade.GetStats();
+                _results.TradeSetups.Add(setupData);
                 _activeTrades.Remove(symbol);
             }
         }
@@ -359,6 +380,13 @@ namespace LucrumLabs.Algorithm
 
             //Debug(string.Format("Lot size: {0}, Risk: {1:P1}, Balance: {2:C}, Price: {3}, ConversionRate: {4}", lotSize, riskPercent, balance, pair.Price, quoteCurrency.ConversionRate));
             return lotSize;
+        }
+
+        public override void OnEndOfAlgorithm()
+        {
+            string resultsFolder = Config.Get("results-destination-folder", Directory.GetCurrentDirectory());;
+            var filePath = Path.Combine(resultsFolder, $"{AlgorithmId}-analysis_data.json");
+            File.WriteAllText(filePath, JsonConvert.SerializeObject(_results, Formatting.Indented));
         }
 
         public void PrintBalance()

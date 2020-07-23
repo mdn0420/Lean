@@ -52,5 +52,10 @@ namespace LucrumLabs
         {
             return bar.Ask.Close - bar.Bid.Close;
         }
+
+        public static decimal GetSpreadPips(this QuoteBar bar)
+        {
+            return bar.GetSpread() / ForexUtils.GetPipSize(bar.Symbol);
+        }
     }
 }

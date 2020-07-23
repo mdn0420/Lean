@@ -6,6 +6,7 @@ using QuantConnect.Data.Market;
 using QuantConnect.Orders;
 using QuantConnect.Securities;
 using QuantConnect.Securities.Forex;
+using QuantConnect.Statistics;
 
 namespace LucrumLabs.Algorithm
 {
@@ -45,12 +46,22 @@ namespace LucrumLabs.Algorithm
         private int _slLlevel = -1;
 
         private QuoteBar _setupBar;
+
         private OrderDirection _direction;
+
+        private decimal _riskPips;
+        private decimal _tpPips;
+        private decimal _profitLossPips;
+
+        public bool TradeEntered => _entryOrder != null && _entryOrder.QuantityFilled != 0;
 
         private decimal _extensionPrice;
 
         private Symbol _symbol;
         private int _lotSize;
+
+        // LEAN Trade object associated with this
+        private Trade _trade;
 
         public ParallaxTrade(ParallaxAlgorithm algorithm, QuoteBar setupBar, Symbol symbol, OrderDirection direction)
         {
@@ -106,20 +117,21 @@ namespace LucrumLabs.Algorithm
                 _tpPrice = GetFibPrice(TakeProfitFibLevel);
                 _extensionPrice = GetFibPrice(ExpireFibLevel);
             }
-
-            var pipRisk = Math.Abs(_entryPrice - _slPrice) / pipSize;
-            _lotSize = _algorithm.CalculatePositionSize(pair, pipRisk, _algorithm.Portfolio.MarginRemaining, 0.01m);
-            if (_direction == OrderDirection.Sell)
-            {
-                _lotSize = -_lotSize;
-            }
             
             RoundPrice(ref _entryPrice);
             RoundPrice(ref _slPrice);
             RoundPrice(ref _tpPrice);
 
-            var tlPips = Math.Abs(_entryPrice - _tpPrice) / pipSize;
-            Console.WriteLine("{0} - Setting up trade, entry: {1}, sl: {2} ({3:F1}), tp: {4} ({5:F1}), units: {6:N0}", _algorithm.Time, _entryPrice, _slPrice, pipRisk, _tpPrice, tlPips, _lotSize);
+            _riskPips = Math.Abs(_entryPrice - _slPrice) / pipSize;
+            _tpPips = Math.Abs(_entryPrice - _tpPrice) / pipSize;
+            
+            _lotSize = _algorithm.CalculatePositionSize(pair, _riskPips, _algorithm.Portfolio.MarginRemaining, 0.01m);
+            if (_direction == OrderDirection.Sell)
+            {
+                _lotSize = -_lotSize;
+            }
+            
+            Console.WriteLine("{0} - Setting up trade, entry: {1}, sl: {2} ({3:F1}), tp: {4} ({5:F1}), units: {6:N0}", _algorithm.Time, _entryPrice, _slPrice, _riskPips, _tpPrice, _tpPips, _lotSize);
         }
 
         public void PlaceOrders()
@@ -207,12 +219,13 @@ namespace LucrumLabs.Algorithm
             {
                 if (orderEvent.Status == OrderStatus.Filled)
                 {
+                    UpdateProfitLoss();
                     Console.WriteLine(
                         "{0} - Stop loss hit for {1} at {2} - P/L: {3}",
                         _algorithm.Time,
                         _symbol,
                         orderEvent.FillPrice,
-                        GetLastTradeProfitLoss()
+                        _profitLossPips
                     );
                     CloseTrade();
                 }
@@ -221,12 +234,13 @@ namespace LucrumLabs.Algorithm
             {
                 if (orderEvent.Status == OrderStatus.Filled)
                 {
+                    UpdateProfitLoss();
                     Console.WriteLine(
                             "{0} - Take profit hit for {1} at {2} - P/L: {3}",
                             _algorithm.Time,
                             _symbol,
                             orderEvent.FillPrice,
-                            GetLastTradeProfitLoss()
+                            _profitLossPips
                     );
                     CloseTrade();
                 }
@@ -237,10 +251,21 @@ namespace LucrumLabs.Algorithm
             }
         }
 
-        private string GetLastTradeProfitLoss()
+        private void UpdateProfitLoss()
         {
-            var lastTrade = _algorithm.TradeBuilder.ClosedTrades.Last();
-            return lastTrade != null ? lastTrade.ProfitLoss.ToString("C") : "NA";
+            _trade = _algorithm.TradeBuilder.ClosedTrades.Last();
+            if (_trade != null)
+            {
+                var pipSize = ForexUtils.GetPipSize(_symbol);
+                if (_direction == OrderDirection.Buy)
+                {
+                    _profitLossPips = (_trade.ExitPrice - _trade.EntryPrice) / pipSize;
+                }
+                else
+                {
+                    _profitLossPips = (_trade.EntryPrice - _trade.ExitPrice) / pipSize;
+                }
+            }
         }
 
         /// <summary>
@@ -370,6 +395,21 @@ namespace LucrumLabs.Algorithm
                 _algorithm.PrintBalance();
             }
             _state = TradeState.CLOSED;
+        }
+
+        public TradeSetupData GetStats()
+        {
+            TradeSetupData result = new TradeSetupData()
+            {
+                BarTime = _setupBar.Time.ConvertToUtc(_algorithm.TimeZone),
+                direction = _direction.ToString(),
+                slPips = _riskPips,
+                tpPips = _tpPips,
+                plPips = _profitLossPips,
+                symbol = _symbol,
+                tradeIndex = _algorithm.TradeBuilder.ClosedTrades.IndexOf(_trade)
+            };
+            return result;
         }
     }
 }
