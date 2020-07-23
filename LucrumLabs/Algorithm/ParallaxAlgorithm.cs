@@ -81,9 +81,7 @@ namespace LucrumLabs.Algorithm
         
         public override void Initialize()
         {
-            var tfName = TradingTimeFrame.Hours == 24 ? "D1" : $"H{TradingTimeFrame.Hours}";
-            SetAlgorithmId($"{AlgorithmId}-{SYMBOL}-{tfName}");
-            SetStartDate(2017, 1, 1);
+            SetStartDate(2016, 1, 1);
             SetEndDate(2019, 12, 31);
             SetCash(100000);
             
