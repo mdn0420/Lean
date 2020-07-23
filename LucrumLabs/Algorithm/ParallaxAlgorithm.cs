@@ -95,7 +95,7 @@ namespace LucrumLabs.Algorithm
 
             _stochastic = new Stochastic(14, 3, 3);
             _bb = new BollingerBands(20, 2);
-            _atr = new AverageTrueRange(14, MovingAverageType.Simple);
+            _atr = new AverageTrueRange(20, MovingAverageType.Simple);
             
             RegisterIndicator(SYMBOL, _stochastic, consolidator);
             RegisterIndicator(SYMBOL, _bb, consolidator);
@@ -165,7 +165,8 @@ namespace LucrumLabs.Algorithm
                 BBUpper = _bb.UpperBand,
                 BBLower = _bb.LowerBand,
                 StochD = _stochastic.StochD,
-                StochK = _stochastic.StochK
+                StochK = _stochastic.StochK,
+                atrPips = Math.Round(_atr / ForexUtils.GetPipSize(SYMBOL), 1)
             };
             _results.BarData.Add(data);
             

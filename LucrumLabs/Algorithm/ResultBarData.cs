@@ -37,6 +37,8 @@ namespace LucrumLabs.Algorithm
         [JsonConverter(typeof(JsonRoundingConverter))]
         public decimal StochD;
 
+        public decimal atrPips;
+
         public ResultBarData(QuoteBar bar, DateTimeZone tz)
         {
             Open = bar.Open.SmartRounding();
