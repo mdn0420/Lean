@@ -92,7 +92,7 @@ namespace LucrumLabs.Algorithm
             // todo: check margin requirements based on risk amount, small stop loss will require large position size
             
             // risk amount in pips
-            decimal pipSize = ForexUtils.GetPipSize(pair.QuoteCurrency.Symbol);
+            decimal pipSize = ForexUtils.GetPipSize(pair);
             decimal entryFib1 = ParallaxAlgorithm.FibRetraceLevels[0];
             decimal entryFib2 = ParallaxAlgorithm.FibRetraceLevels[1];
             if (_direction == OrderDirection.Buy)
@@ -256,7 +256,8 @@ namespace LucrumLabs.Algorithm
             _trade = _algorithm.TradeBuilder.ClosedTrades.Last();
             if (_trade != null)
             {
-                var pipSize = ForexUtils.GetPipSize(_symbol);
+                Forex pair = _algorithm.Securities[_symbol] as Forex;
+                var pipSize = ForexUtils.GetPipSize(pair);
                 if (_direction == OrderDirection.Buy)
                 {
                     _profitLossPips = (_trade.ExitPrice - _trade.EntryPrice) / pipSize;

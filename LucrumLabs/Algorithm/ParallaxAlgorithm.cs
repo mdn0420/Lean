@@ -62,23 +62,23 @@ namespace LucrumLabs.Algorithm
         /// </summary>
         private const int MaxSetupFibRetracement = 1;
 
-        private TimeSpan TradingTimeFrame = TimeSpan.FromHours(4);
+        private TimeSpan TradingTimeFrame = TimeSpan.FromHours(24);
 
-        private const string SYMBOL = "USDCAD";
+        private readonly string[] PAIRS = ForexPairs.MAJORS;
 
-        private RollingWindow<QuoteBar> _setupWindow = new RollingWindow<QuoteBar>(2);
-        private RollingWindow<IndicatorDataPoint> _bbUpperWindow = new RollingWindow<IndicatorDataPoint>(2);
-        private RollingWindow<IndicatorDataPoint> _bbLowerWindow = new RollingWindow<IndicatorDataPoint>(2);
-        private RollingWindow<IndicatorDataPoint> _bbMidWindow = new RollingWindow<IndicatorDataPoint>(2);
+        private Dictionary<Symbol, RollingWindow<QuoteBar>> _setupWindow = new Dictionary<Symbol, RollingWindow<QuoteBar>>();
+        private Dictionary<Symbol, RollingWindow<IndicatorDataPoint>> _bbUpperWindow = new Dictionary<Symbol, RollingWindow<IndicatorDataPoint>>();
+        private Dictionary<Symbol, RollingWindow<IndicatorDataPoint>> _bbLowerWindow = new Dictionary<Symbol, RollingWindow<IndicatorDataPoint>>();
+        private Dictionary<Symbol, RollingWindow<IndicatorDataPoint>> _bbMidWindow = new Dictionary<Symbol, RollingWindow<IndicatorDataPoint>>();
 
         private Dictionary<Symbol, ParallaxTrade> _activeTrades = new Dictionary<Symbol, ParallaxTrade>();
 
         private AlgorithmResults _results = new AlgorithmResults();
         
-        private Stochastic _stochastic;
-        private BollingerBands _bb;
-        private AverageTrueRange _atr;
-        
+        private Dictionary<Symbol, Stochastic> _stochastics = new Dictionary<Symbol, Stochastic>();
+        private Dictionary<Symbol, BollingerBands> _bollingerBands = new Dictionary<Symbol, BollingerBands>();
+        private Dictionary<Symbol, AverageTrueRange> _atrs = new Dictionary<Symbol, AverageTrueRange>();
+
         public override void Initialize()
         {
             SetStartDate(2016, 1, 1);
@@ -87,20 +87,34 @@ namespace LucrumLabs.Algorithm
             
             SetBrokerageModel(BrokerageName.OandaBrokerage);
 
-            AddForex(SYMBOL, Resolution.Minute, Market.Oanda);
-            Securities[SYMBOL].SetLeverage(50m);
 
+            foreach (var symbol in PAIRS)
+            {
+                SetupPair(symbol);
+            }
+        }
+
+        private void SetupPair(string ticker)
+        {
             var consolidator = new SmoothQuoteBarConsolidator(NewYorkClosePeriod(TradingTimeFrame));
-            SubscriptionManager.AddConsolidator(SYMBOL, consolidator);
-
-            _stochastic = new Stochastic(14, 3, 3);
-            _bb = new BollingerBands(20, 2);
-            _atr = new AverageTrueRange(20, MovingAverageType.Simple);
+            var fx = AddForex(ticker, Resolution.Minute, Market.Oanda);
+            var symbol = fx.Symbol;
+            Securities[symbol].SetLeverage(50m);
             
-            RegisterIndicator(SYMBOL, _stochastic, consolidator);
-            RegisterIndicator(SYMBOL, _bb, consolidator);
-            RegisterIndicator(SYMBOL, _atr, consolidator);
-
+            SubscriptionManager.AddConsolidator(fx.Symbol, consolidator);
+            
+            var stoch = _stochastics[fx.Symbol] = new Stochastic(14, 3, 3);
+            var bb = _bollingerBands[fx.Symbol] = new BollingerBands(20, 2);
+            var atr = _atrs[fx.Symbol] = new AverageTrueRange(20, MovingAverageType.Simple);
+            RegisterIndicator(symbol, stoch, consolidator);
+            RegisterIndicator(symbol, bb, consolidator);
+            RegisterIndicator(symbol, atr, consolidator);
+            
+            _setupWindow[symbol] = new RollingWindow<QuoteBar>(2);
+            _bbMidWindow[symbol] = new RollingWindow<IndicatorDataPoint>(2);
+            _bbUpperWindow[symbol] = new RollingWindow<IndicatorDataPoint>(2);
+            _bbLowerWindow[symbol] = new RollingWindow<IndicatorDataPoint>(2);
+            
             // This needs to get added last so the bar gets processed after indicators are updated
             consolidator.DataConsolidated += OnDataConsolidated;
         }
@@ -152,33 +166,36 @@ namespace LucrumLabs.Algorithm
             debugStr += string.Format("BBMid:{0:F5} Up: {1:F5} Low: {2:F5}", _bb.MiddleBand, _bb.UpperBand, _bb.LowerBand);
             Console.WriteLine(debugStr);
             #endif
-                
 
-            if (!_bb.IsReady || !_stochastic.IsReady)
+            var symbol = bar.Symbol;
+            var bb = _bollingerBands[symbol];
+            var stoch = _stochastics[symbol];
+            if (!bb.IsReady || !stoch.IsReady)
             {
                 return;
             }
 
-            var data = new ResultBarData(bar, TimeZone)
+            var data = new ResultBarData(Securities[symbol] as Forex, bar, TimeZone)
             {
-                BBMid = _bb.MiddleBand,
-                BBUpper = _bb.UpperBand,
-                BBLower = _bb.LowerBand,
-                StochD = _stochastic.StochD,
-                StochK = _stochastic.StochK,
-                atrPips = Math.Round(_atr / ForexUtils.GetPipSize(SYMBOL), 1)
+                BBMid = bb.MiddleBand,
+                BBUpper = bb.UpperBand,
+                BBLower = bb.LowerBand,
+                StochD = stoch.StochD,
+                StochK = stoch.StochK,
+                atrPips = Math.Round(_atrs[symbol] / ForexUtils.GetPipSize(Securities[symbol] as Forex), 1)
             };
             _results.BarData.Add(data);
             
-            _setupWindow.Add(bar);
-            _bbUpperWindow.Add(_bb.UpperBand.Current);
-            _bbLowerWindow.Add(_bb.LowerBand.Current);
-            _bbMidWindow.Add(_bb.MiddleBand.Current);
-            CheckSetup(_setupWindow);
+            _setupWindow[symbol].Add(bar);
+            _bbUpperWindow[symbol].Add(bb.UpperBand.Current);
+            _bbLowerWindow[symbol].Add(bb.LowerBand.Current);
+            _bbMidWindow[symbol].Add(bb.MiddleBand.Current);
+            CheckSetup(symbol);
         }
 
-        private void CheckSetup(RollingWindow<QuoteBar> window)
+        private void CheckSetup(Symbol symbol)
         {
+            var window = _setupWindow[symbol];
             if (!window.IsReady)
             {
                 return;
@@ -188,9 +205,9 @@ namespace LucrumLabs.Algorithm
             var thisBar = window[0];
 
             int ibar = IsIndecisionBar(prevBar, 
-                _bbUpperWindow[1].Value, 
-                _bbLowerWindow[1].Value, 
-                _bbMidWindow[1].Value);
+                _bbUpperWindow[symbol][1].Value, 
+                _bbLowerWindow[symbol][1].Value, 
+                _bbMidWindow[symbol][1].Value);
 
             /*
             if (ibar != 0)
@@ -201,16 +218,16 @@ namespace LucrumLabs.Algorithm
             var ibarBodyLength = prevBar.GetBodyTop() - prevBar.GetBodyBottom();
             var setupBodyLength = thisBar.GetBodyTop() - thisBar.GetBodyBottom();
 
-            if (setupBodyLength < _atr * SetupBarLengthATRScale)
+            if (setupBodyLength < _atrs[symbol] * SetupBarLengthATRScale)
             {
                 return;
             }
-
+            
             var setupRatios = thisBar.GetBarRatios();
             if (ibar != 0 && setupRatios.Body > SetupBodyRatioMin && setupBodyLength > ibarBodyLength)
             {
-                var stochK = _stochastic.StochK.Current.Value;
-                var stochD = _stochastic.StochD.Current.Value;
+                var stochK = _stochastics[symbol].StochK.Current.Value;
+                var stochD = _stochastics[symbol].StochD.Current.Value;
 
                 var maxSetupRetrace = FibRetraceLevels[MaxSetupFibRetracement];
                 var spread = thisBar.GetSpread();
@@ -287,11 +304,6 @@ namespace LucrumLabs.Algorithm
 
         private int IsIndecisionBar(QuoteBar bar, decimal bbUpper, decimal bbLower, decimal bbMid)
         {
-            if (!_bb.IsReady)
-            {
-                return 0;
-            }
-            
             int result = 0;
             var ratios = bar.GetBarRatios();
 
@@ -362,7 +374,7 @@ namespace LucrumLabs.Algorithm
             var quoteCurrency = pair.QuoteCurrency;
 
             int lotSize = 0;
-            decimal pipSize = ForexUtils.GetPipSize(quoteCurrency.Symbol);
+            decimal pipSize = ForexUtils.GetPipSize(pair);
 
             if (quoteCurrency.ConversionRate <= 0m)
             {

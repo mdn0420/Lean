@@ -6,9 +6,9 @@ import os
 
 #pwd = os.path.abspath('')
 script_dir = os.path.dirname(__file__) #<-- absolute dir the script is in
-result_dir = os.path.join (script_dir, "../../../testresults/")
-algo_result_filepath = os.path.join(result_dir, "ParallaxAlgorithm.json")
-analysis_data_filepath = os.path.join(result_dir, "ParallaxAlgorithm-analysis_data.json")
+result_dir = os.path.join (script_dir, "../../results/parallax/backtest2")
+algo_result_filepath = os.path.join(result_dir, "USDCAD-H4.json")
+analysis_data_filepath = os.path.join(result_dir, "USDCAD-H4-analysis_data.json")
 
 include_hours = True
     

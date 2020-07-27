@@ -8,6 +8,14 @@ import json
 
 
 #print(trades_df)
+
+def get_trade_statistics(path):
+    with open(path) as f:
+        data = json.load(f)
+    stats = {}
+    stats['TradeStats'] = data['TotalPerformance']['TradeStatistics']
+    stats['PortfolioStats'] = data['TotalPerformance']['PortfolioStatistics']
+    return pd.json_normalize(stats)
     
 def get_closed_trades_df(path):
     with open(path) as f:

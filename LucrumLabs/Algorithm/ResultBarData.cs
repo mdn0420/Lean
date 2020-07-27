@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using NodaTime;
 using QuantConnect;
 using QuantConnect.Data.Market;
+using QuantConnect.Securities.Forex;
 using QuantConnect.Util;
 
 namespace LucrumLabs.Algorithm
@@ -39,13 +40,13 @@ namespace LucrumLabs.Algorithm
 
         public decimal atrPips;
 
-        public ResultBarData(QuoteBar bar, DateTimeZone tz)
+        public ResultBarData(Forex forex, QuoteBar bar, DateTimeZone tz)
         {
             Open = bar.Open.SmartRounding();
             High = bar.High.SmartRounding();
             Low = bar.Low.SmartRounding();
             Close = bar.Close.SmartRounding();
-            spread = bar.GetSpreadPips();
+            spread = bar.GetSpreadPips(forex);
             Time = bar.Time.ConvertToUtc(tz);
         }
     }

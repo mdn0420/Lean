@@ -55,6 +55,7 @@
     <Compile Include="Algorithm\TradeSetupData.cs" />
     <Compile Include="BarUtils.cs" />
     <Compile Include="Data\SmoothQuoteBarConsolidator.cs" />
+    <Compile Include="ForexPairs.cs" />
     <Compile Include="ForexUtils.cs" />
     <Compile Include="MathUtils.cs" />
     <Compile Include="TestAlgorithm.cs" />

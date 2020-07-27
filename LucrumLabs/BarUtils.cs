@@ -1,5 +1,6 @@
 using System;
 using QuantConnect.Data.Market;
+using QuantConnect.Securities.Forex;
 
 namespace LucrumLabs
 {
@@ -53,9 +54,9 @@ namespace LucrumLabs
             return bar.Ask.Close - bar.Bid.Close;
         }
 
-        public static decimal GetSpreadPips(this QuoteBar bar)
+        public static decimal GetSpreadPips(this QuoteBar bar, Forex pair)
         {
-            return bar.GetSpread() / ForexUtils.GetPipSize(bar.Symbol);
+            return bar.GetSpread() / ForexUtils.GetPipSize(pair);
         }
     }
 }

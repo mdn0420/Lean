@@ -5,9 +5,10 @@ namespace LucrumLabs
 {
     public static class ForexUtils
     {
-        public static decimal GetPipSize(string symbol)
+        public static decimal GetPipSize(Forex pair)
         {
-            if (symbol.LazyToUpper() == "JPY")
+            var quoteSymbol = pair.QuoteCurrency.Symbol;
+            if (quoteSymbol.LazyToUpper() == "JPY")
             {
                 return 0.01m;
             }
