@@ -48,6 +48,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Algorithm\AlgorithmResults.cs" />
+    <Compile Include="Algorithm\ParallaxTradeSetup.cs" />
     <Compile Include="Algorithm\ResultBarData.cs" />
     <Compile Include="Algorithm\EmaForexAlgorithm.cs" />
     <Compile Include="Algorithm\ParallaxTrade.cs" />

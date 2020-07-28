@@ -65,14 +65,14 @@ namespace LucrumLabs.Algorithm
 
         private TimeSpan TradingTimeFrame = TimeSpan.FromHours(24);
 
-        private readonly string[] PAIRS = ForexPairs.MAJORS_28;
+        private readonly string[] PAIRS = new string[] {"EURUSD"};
 
         private Dictionary<Symbol, RollingWindow<QuoteBar>> _setupWindow = new Dictionary<Symbol, RollingWindow<QuoteBar>>();
         private Dictionary<Symbol, RollingWindow<IndicatorDataPoint>> _bbUpperWindow = new Dictionary<Symbol, RollingWindow<IndicatorDataPoint>>();
         private Dictionary<Symbol, RollingWindow<IndicatorDataPoint>> _bbLowerWindow = new Dictionary<Symbol, RollingWindow<IndicatorDataPoint>>();
         private Dictionary<Symbol, RollingWindow<IndicatorDataPoint>> _bbMidWindow = new Dictionary<Symbol, RollingWindow<IndicatorDataPoint>>();
 
-        private Dictionary<Symbol, ParallaxTrade> _activeTrades = new Dictionary<Symbol, ParallaxTrade>();
+        private Dictionary<Symbol, ParallaxTradeSetup> _activeTrades = new Dictionary<Symbol, ParallaxTradeSetup>();
 
         private AlgorithmResults _results = new AlgorithmResults();
         
@@ -250,7 +250,7 @@ namespace LucrumLabs.Algorithm
                         thisBar.Low,
                         spread
                     );
-                    TryOpenTrade(thisBar, OrderDirection.Buy);
+                    TryOpenTrade(prevBar, thisBar,OrderDirection.Buy);
                 }
                 else if (ibar == -1 && 
                          thisBar.Close < prevBar.Close &&
@@ -268,12 +268,12 @@ namespace LucrumLabs.Algorithm
                         thisBar.Low,
                         spread
                     );
-                    TryOpenTrade(thisBar, OrderDirection.Sell);
+                    TryOpenTrade(prevBar, thisBar, OrderDirection.Sell);
                 }
             }
         }
 
-        private void TryOpenTrade(QuoteBar setupBar, OrderDirection direction)
+        private void TryOpenTrade(QuoteBar ibar, QuoteBar setupBar, OrderDirection direction)
         {
             bool canTrade = true;
             var ticker = setupBar.Symbol;
@@ -299,10 +299,10 @@ namespace LucrumLabs.Algorithm
 
             if (canTrade)
             {
-                ParallaxTrade trade = _activeTrades[ticker] = new ParallaxTrade(
+                ParallaxTradeSetup trade = _activeTrades[ticker] = new ParallaxTradeSetup(
                     this,
+                    ibar,
                     setupBar,
-                    ticker.Value,
                     direction
                 );
                 trade.PlaceOrders();
@@ -323,8 +323,8 @@ namespace LucrumLabs.Algorithm
             foreach (var symbol in remove)
             {
                 var trade = _activeTrades[symbol];
-                TradeSetupData setupData = trade.GetStats();
-                _results.TradeSetups.Add(setupData);
+                var stats = trade.GetStats();
+                _results.TradeSetups.AddRange(stats);
                 _activeTrades.Remove(symbol);
             }
         }

@@ -49,6 +49,7 @@ namespace LucrumLabs.Algorithm
 
         private OrderDirection _direction;
 
+        private decimal _riskPercent;
         private decimal _riskPips;
         private decimal _tpPips;
         private decimal _profitLossPips;
@@ -63,29 +64,21 @@ namespace LucrumLabs.Algorithm
         // LEAN Trade object associated with this
         private Trade _trade;
 
-        public ParallaxTrade(ParallaxAlgorithm algorithm, QuoteBar setupBar, Symbol symbol, OrderDirection direction)
+        public ParallaxTrade(ParallaxAlgorithm algorithm, QuoteBar setupBar, OrderDirection direction, decimal entryFib, decimal slFib, decimal tpFib, decimal riskPercent)
         {
             _algorithm = algorithm;
             _setupBar = setupBar;
-            _symbol = symbol;
+            _symbol = setupBar.Symbol;
             _direction = direction;
+            _riskPercent = riskPercent;
 
-            CalculatePrices();
-            const decimal extensionFibLevel = -0.382m;
-            if (direction == OrderDirection.Buy)
-            {
-                _extensionPrice = MathUtils.GetFibPrice(setupBar.Low, setupBar.High, extensionFibLevel);
-            }
-            else
-            {
-                _extensionPrice = MathUtils.GetFibPrice(setupBar.High, setupBar.Low, extensionFibLevel);
-            }
+            CalculatePrices(entryFib, slFib, tpFib);
         }
 
         /// <summary>
         /// Calculate the order prices
         /// </summary>
-        private void CalculatePrices()
+        private void CalculatePrices(decimal entryFib, decimal slFib, decimal tpFib)
         {
             Forex pair = _algorithm.Securities[_symbol] as Forex;
 
@@ -93,30 +86,11 @@ namespace LucrumLabs.Algorithm
             
             // risk amount in pips
             decimal pipSize = ForexUtils.GetPipSize(pair);
-            decimal entryFib1 = ParallaxAlgorithm.FibRetraceLevels[0];
-            decimal entryFib2 = ParallaxAlgorithm.FibRetraceLevels[1];
-            if (_direction == OrderDirection.Buy)
-            {
-                _entryPrice = GetFibPrice(entryFib1);
-                if (_setupBar.Close < _entryPrice)
-                {
-                    _entryPrice = GetFibPrice(entryFib2);
-                }
-                _slPrice = GetFibPrice(StopLossFibLevel);
-                _tpPrice = GetFibPrice(TakeProfitFibLevel);
-                _extensionPrice = GetFibPrice(ExpireFibLevel);
-            }
-            else
-            {
-                _entryPrice = GetFibPrice(entryFib1);
-                if (_setupBar.Close > _entryPrice)
-                {
-                    _entryPrice = GetFibPrice(entryFib2);
-                }
-                _slPrice = GetFibPrice(StopLossFibLevel);
-                _tpPrice = GetFibPrice(TakeProfitFibLevel);
-                _extensionPrice = GetFibPrice(ExpireFibLevel);
-            }
+
+            _entryPrice = GetFibPrice(entryFib);
+            _slPrice = GetFibPrice(slFib);
+            _tpPrice = GetFibPrice(tpFib);
+            _extensionPrice = GetFibPrice(ExpireFibLevel);
             
             RoundPrice(ref _entryPrice);
             RoundPrice(ref _slPrice);
@@ -286,6 +260,12 @@ namespace LucrumLabs.Algorithm
 
         public void OnDataUpdate(QuoteBar bar)
         {
+            if (bar.Symbol != _symbol)
+            {
+                _algorithm.Error(string.Format("Received {0} bar data for {1} trade", bar.Symbol, _symbol));
+                return;
+            }
+            
             if (_state != TradeState.OPEN)
             {
                 // Cancel order if we haven't filled and we already hit the first extension level
