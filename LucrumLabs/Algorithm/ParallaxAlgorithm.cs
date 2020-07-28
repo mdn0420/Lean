@@ -65,7 +65,7 @@ namespace LucrumLabs.Algorithm
 
         private TimeSpan TradingTimeFrame = TimeSpan.FromHours(24);
 
-        private readonly string[] PAIRS = new string[] {"EURUSD"};
+        private readonly string[] PAIRS = ForexPairs.MAJORS_28;
 
         private Dictionary<Symbol, RollingWindow<QuoteBar>> _setupWindow = new Dictionary<Symbol, RollingWindow<QuoteBar>>();
         private Dictionary<Symbol, RollingWindow<IndicatorDataPoint>> _bbUpperWindow = new Dictionary<Symbol, RollingWindow<IndicatorDataPoint>>();
@@ -73,6 +73,7 @@ namespace LucrumLabs.Algorithm
         private Dictionary<Symbol, RollingWindow<IndicatorDataPoint>> _bbMidWindow = new Dictionary<Symbol, RollingWindow<IndicatorDataPoint>>();
 
         private Dictionary<Symbol, ParallaxTradeSetup> _activeTrades = new Dictionary<Symbol, ParallaxTradeSetup>();
+        private List<Symbol> _activeSymbols = new List<Symbol>();
 
         private AlgorithmResults _results = new AlgorithmResults();
         
@@ -97,16 +98,16 @@ namespace LucrumLabs.Algorithm
 
         private void SetupPair(string ticker)
         {
-            var consolidator = new SmoothQuoteBarConsolidator(NewYorkClosePeriod(TradingTimeFrame));
+            var consolidator = new SmoothQuoteBarConsolidator(AlgoUtils.NewYorkClosePeriod(TimeZone, TradingTimeFrame));
             var fx = AddForex(ticker, Resolution.Minute, Market.Oanda);
             var symbol = fx.Symbol;
             Securities[symbol].SetLeverage(50m);
             
             SubscriptionManager.AddConsolidator(fx.Symbol, consolidator);
             
-            var stoch = _stochastics[fx.Symbol] = new Stochastic(14, 3, 3);
-            var bb = _bollingerBands[fx.Symbol] = new BollingerBands(20, 2);
-            var atr = _atrs[fx.Symbol] = new AverageTrueRange(20, MovingAverageType.Simple);
+            var stoch = _stochastics[symbol] = new Stochastic(14, 3, 3);
+            var bb = _bollingerBands[symbol] = new BollingerBands(20, 2);
+            var atr = _atrs[symbol] = new AverageTrueRange(20, MovingAverageType.Simple);
             RegisterIndicator(symbol, stoch, consolidator);
             RegisterIndicator(symbol, bb, consolidator);
             RegisterIndicator(symbol, atr, consolidator);
@@ -118,39 +119,6 @@ namespace LucrumLabs.Algorithm
             
             // This needs to get added last so the bar gets processed after indicators are updated
             consolidator.DataConsolidated += OnDataConsolidated;
-        }
-
-        /// <summary>
-        /// Calculates period aligned with NY session close time
-        /// </summary>
-        /// <param name="period"></param>
-        /// <returns></returns>
-        private Func<DateTime, CalendarInfo> NewYorkClosePeriod(TimeSpan period)
-        {
-            return dt =>
-            {
-                // dt is start time of the data slice
-                var nyc = dt.ConvertTo(TimeZone, TimeZones.NewYork).RoundUp(TimeSpan.FromHours(1));
-                int closeHour = 17; // 5pm)
-                if (nyc.Hour <= closeHour)
-                {
-                    nyc = nyc.AddHours(closeHour - nyc.Hour);
-                }
-                else
-                {
-                    nyc = nyc.AddHours(closeHour + (24 - nyc.Hour));
-                }
-
-                // walk backwards until we find the period this time is in
-                DateTime periodStart = nyc.ConvertTo(TimeZones.NewYork, TimeZone);
-                while (dt < periodStart)
-                {
-                    periodStart = periodStart.Subtract(period);
-                }
-
-                var result = new CalendarInfo(periodStart, period);
-                return result;
-            };
         }
 
         private void OnDataConsolidated(object sender, QuoteBar bar)
@@ -171,7 +139,8 @@ namespace LucrumLabs.Algorithm
             var symbol = bar.Symbol;
             var bb = _bollingerBands[symbol];
             var stoch = _stochastics[symbol];
-            if (!bb.IsReady || !stoch.IsReady)
+            var atr = _atrs[symbol];
+            if (!bb.IsReady || !stoch.IsReady || !atr.IsReady)
             {
                 return;
             }
@@ -183,7 +152,7 @@ namespace LucrumLabs.Algorithm
                 BBLower = bb.LowerBand,
                 StochD = stoch.StochD,
                 StochK = stoch.StochK,
-                atrPips = Math.Round(_atrs[symbol] / ForexUtils.GetPipSize(Securities[symbol] as Forex), 1)
+                atrPips = Math.Round(atr / ForexUtils.GetPipSize(Securities[symbol] as Forex), 1)
             };
             _results.BarData.Add(data);
             
@@ -219,11 +188,12 @@ namespace LucrumLabs.Algorithm
             var ibarBodyLength = prevBar.GetBodyTop() - prevBar.GetBodyBottom();
             var setupBodyLength = thisBar.GetBodyTop() - thisBar.GetBodyBottom();
 
+            var atr = _atrs[symbol];
             if (setupBodyLength < _atrs[symbol] * SetupBarLengthATRScale)
             {
                 return;
             }
-            
+
             var setupRatios = thisBar.GetBarRatios();
             if (ibar != 0 && setupRatios.Body > SetupBodyRatioMin && setupBodyLength > ibarBodyLength)
             {
@@ -231,7 +201,6 @@ namespace LucrumLabs.Algorithm
                 var stochD = _stochastics[symbol].StochD.Current.Value;
 
                 var maxSetupRetrace = FibRetraceLevels[MaxSetupFibRetracement];
-                var spread = thisBar.GetSpread();
                 // long setup
                 if (ibar == 1 && 
                     thisBar.Close > prevBar.Close &&  // higher close
@@ -243,12 +212,11 @@ namespace LucrumLabs.Algorithm
                     setupRatios.Top < SetupWickRatioMax) // Small wick in direction of trade
                 {
                     Console.WriteLine(
-                        "{0} {1} LONG setup: H/L: {2}/{3}, spread: {4}",
+                        "{0} {1} LONG setup: H/L: {2}/{3}",
                         thisBar.Time,
                         symbol,
                         thisBar.High,
-                        thisBar.Low,
-                        spread
+                        thisBar.Low
                     );
                     TryOpenTrade(prevBar, thisBar,OrderDirection.Buy);
                 }
@@ -261,12 +229,11 @@ namespace LucrumLabs.Algorithm
                          setupRatios.Bottom < SetupWickRatioMax)
                 {
                     Console.WriteLine(
-                        "{0} {1} SHORT setup: H/L: {2}/{3}, spread: {4}",
+                        "{0} {1} SHORT setup: H/L: {2}/{3}",
                         thisBar.Time,
                         symbol,
                         thisBar.High,
-                        thisBar.Low,
-                        spread
+                        thisBar.Low
                     );
                     TryOpenTrade(prevBar, thisBar, OrderDirection.Sell);
                 }
@@ -305,6 +272,7 @@ namespace LucrumLabs.Algorithm
                     setupBar,
                     direction
                 );
+                _activeSymbols.Add(ticker);
                 trade.PlaceOrders();
             }
         }
@@ -326,6 +294,7 @@ namespace LucrumLabs.Algorithm
                 var stats = trade.GetStats();
                 _results.TradeSetups.AddRange(stats);
                 _activeTrades.Remove(symbol);
+                _activeSymbols.Remove(symbol);
             }
         }
 
@@ -372,14 +341,15 @@ namespace LucrumLabs.Algorithm
             }*/
 
             QuoteBar bar;
-            foreach (var kvp in _activeTrades)
+            for (int i = _activeSymbols.Count - 1; i >= 0; i--)
             {
-                if (slice.QuoteBars.TryGetValue(kvp.Key, out bar))
+                var symbol = _activeSymbols[i];
+                if (slice.QuoteBars.TryGetValue(symbol, out bar))
                 {
-                    kvp.Value.OnDataUpdate(bar);
+                    _activeTrades[symbol].OnDataUpdate(bar);
                 } 
             }
-            
+
             CleanupTrades();
         }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Policy;
 using QuantConnect;
 using QuantConnect.Data.Market;
 using QuantConnect.Orders;
@@ -18,10 +19,6 @@ namespace LucrumLabs.Algorithm
             OPEN,
             CLOSED
         }
-
-        private const decimal StopLossFibLevel = 0.786m;
-
-        private const decimal TakeProfitFibLevel = -1.618m;
 
         /// <summary>
         /// If price hits this extension level before entry is filled, cancel the trade
@@ -53,7 +50,7 @@ namespace LucrumLabs.Algorithm
         private decimal _riskPips;
         private decimal _tpPips;
         private decimal _profitLossPips;
-
+        
         public bool TradeEntered => _entryOrder != null && _entryOrder.QuantityFilled != 0;
 
         private decimal _extensionPrice;
@@ -64,13 +61,31 @@ namespace LucrumLabs.Algorithm
         // LEAN Trade object associated with this
         private Trade _trade;
 
-        public ParallaxTrade(ParallaxAlgorithm algorithm, QuoteBar setupBar, OrderDirection direction, decimal entryFib, decimal slFib, decimal tpFib, decimal riskPercent)
+        // For internal tracking purposes
+        private string _tradeName;
+
+        public ParallaxTrade(ParallaxAlgorithm algorithm, 
+            QuoteBar setupBar, 
+            OrderDirection direction, 
+            decimal entryFib, 
+            decimal slFib, 
+            decimal tpFib, 
+            decimal riskPercent,
+            string tag="")
         {
             _algorithm = algorithm;
             _setupBar = setupBar;
             _symbol = setupBar.Symbol;
             _direction = direction;
             _riskPercent = riskPercent;
+            if (string.IsNullOrEmpty(tag))
+            {
+                _tradeName = _symbol;
+            }
+            else
+            {
+                _tradeName = string.Format("{0}:{1}", _symbol, tag);
+            }
 
             CalculatePrices(entryFib, slFib, tpFib);
         }
@@ -82,12 +97,20 @@ namespace LucrumLabs.Algorithm
         {
             Forex pair = _algorithm.Securities[_symbol] as Forex;
 
-            // todo: check margin requirements based on risk amount, small stop loss will require large position size
-            
-            // risk amount in pips
+            var spread = _setupBar.GetSpread();
             decimal pipSize = ForexUtils.GetPipSize(pair);
 
             _entryPrice = GetFibPrice(entryFib);
+            
+            if (_direction == OrderDirection.Buy)
+            {
+                _entryPrice -= spread * 2m;
+            }
+            else
+            {
+                _entryPrice += spread * 2m;
+            }
+            
             _slPrice = GetFibPrice(slFib);
             _tpPrice = GetFibPrice(tpFib);
             _extensionPrice = GetFibPrice(ExpireFibLevel);
@@ -99,13 +122,13 @@ namespace LucrumLabs.Algorithm
             _riskPips = Math.Abs(_entryPrice - _slPrice) / pipSize;
             _tpPips = Math.Abs(_entryPrice - _tpPrice) / pipSize;
             
-            _lotSize = _algorithm.CalculatePositionSize(pair, _riskPips, _algorithm.Portfolio.MarginRemaining, 0.01m);
+            _lotSize = _algorithm.CalculatePositionSize(pair, _riskPips, _algorithm.Portfolio.MarginRemaining, _riskPercent);
             if (_direction == OrderDirection.Sell)
             {
                 _lotSize = -_lotSize;
             }
             
-            Console.WriteLine("{0} - Setting up trade, entry: {1}, sl: {2} ({3:F1}), tp: {4} ({5:F1}), units: {6:N0}", _algorithm.Time, _entryPrice, _slPrice, _riskPips, _tpPrice, _tpPips, _lotSize);
+            Console.WriteLine("{0} - Setting up trade, entry: {1}, sl: {2} ({3:F1}), tp: {4} ({5:F1}), units: {6:N0} {7}:{8}", _algorithm.Time, _entryPrice, _slPrice, _riskPips, _tpPrice, _tpPips, _lotSize, _symbol, _tradeName);
         }
 
         public void PlaceOrders()
@@ -173,14 +196,14 @@ namespace LucrumLabs.Algorithm
                 if (orderEvent.Status == OrderStatus.Filled)
                 {
                     // Setup TP/SL orders
-                    Console.WriteLine("{0} - Entered {1} trade for {2:N0} {3} @ {4}", _algorithm.Time, _direction, orderEvent.Quantity, _symbol, orderEvent.FillPrice);
+                    Console.WriteLine("{0} - Entered {1} trade for {2:N0} {3} @ {4}", _algorithm.Time, _direction, orderEvent.Quantity, _tradeName, orderEvent.FillPrice);
                     _state = TradeState.OPEN;
                     //_algorithm.PrintBalance();
                     PlaceManagementOrders();
                 } 
                 else if (orderEvent.Status == OrderStatus.Canceled)
                 {
-                    Console.WriteLine("{0} - Trade for {1} cancelled", _algorithm.Time, _symbol);
+                    Console.WriteLine("{0} - Trade for {1} cancelled", _algorithm.Time, _tradeName);
                     CloseTrade();
                 }
                 else if (orderEvent.Status == OrderStatus.Invalid)
@@ -197,7 +220,7 @@ namespace LucrumLabs.Algorithm
                     Console.WriteLine(
                         "{0} - Stop loss hit for {1} at {2} - P/L: {3}",
                         _algorithm.Time,
-                        _symbol,
+                        _tradeName,
                         orderEvent.FillPrice,
                         _profitLossPips
                     );
@@ -212,7 +235,7 @@ namespace LucrumLabs.Algorithm
                     Console.WriteLine(
                             "{0} - Take profit hit for {1} at {2} - P/L: {3}",
                             _algorithm.Time,
-                            _symbol,
+                            _tradeName,
                             orderEvent.FillPrice,
                             _profitLossPips
                     );
@@ -262,7 +285,7 @@ namespace LucrumLabs.Algorithm
         {
             if (bar.Symbol != _symbol)
             {
-                _algorithm.Error(string.Format("Received {0} bar data for {1} trade", bar.Symbol, _symbol));
+                _algorithm.Error(string.Format("Received {0} bar data for {1} trade", bar.Symbol, _tradeName));
                 return;
             }
             
@@ -274,7 +297,7 @@ namespace LucrumLabs.Algorithm
                                            (_direction == OrderDirection.Sell && price < _extensionPrice);
                 if (cancelFromExtension)
                 {
-                    Console.WriteLine("{0} - Price ran to extension before entry order filled.. cancelling trade.", _algorithm.Time);
+                    Console.WriteLine("{0} - Price ran to extension before entry order filled.. cancelling {1} trade.", _algorithm.Time, _tradeName);
                     CloseTrade();
                 }
             }
@@ -349,7 +372,7 @@ namespace LucrumLabs.Algorithm
             if (newStopPrice > 0m)
             {
                 RoundPrice(ref newStopPrice);
-                Console.WriteLine("{0} - Moving stop loss to {1}", _algorithm.Time, newStopPrice);
+                Console.WriteLine("{0} - Moving stop loss on {1} to {2}", _algorithm.Time, _tradeName, newStopPrice);
                 _slOrder.UpdateStopPrice(newStopPrice);
             }
         }
