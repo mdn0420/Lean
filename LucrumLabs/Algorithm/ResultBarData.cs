@@ -10,6 +10,7 @@ namespace LucrumLabs.Algorithm
 {
     public class ResultBarData
     {
+        public string Symbol;
         public DateTime Time { get; private set; }
         
         [JsonProperty(PropertyName = "O")]
@@ -42,6 +43,7 @@ namespace LucrumLabs.Algorithm
 
         public ResultBarData(Forex forex, QuoteBar bar, DateTimeZone tz)
         {
+            Symbol = bar.Symbol;
             Open = bar.Open.SmartRounding();
             High = bar.High.SmartRounding();
             Low = bar.Low.SmartRounding();

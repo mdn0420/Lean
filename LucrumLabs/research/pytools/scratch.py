@@ -7,9 +7,9 @@ import os
 
 #pwd = os.path.abspath('')
 script_dir = os.path.dirname(__file__) #<-- absolute dir the script is in
-result_dir = os.path.join (script_dir, "../../results/parallax/backtest2")
-algo_result_filepath = os.path.join(result_dir, "USDCAD-H4.json")
-analysis_data_filepath = os.path.join(result_dir, "USDCAD-H4-analysis_data.json")
+result_dir = os.path.join (script_dir, "../../results/parallax/backtest3")
+algo_result_filepath = os.path.join(result_dir, "2016-2019_Major28.json")
+analysis_data_filepath = os.path.join(result_dir, "2016-2019_Major28-analysis_data.json")
 
-stats = lt.get_trade_statistics(algo_result_filepath)
-print(stats)
+bar_data = lt.get_bar_data_df(analysis_data_filepath)
+print(bar_data)

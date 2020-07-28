@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using LucrumLabs.Data;
 using Newtonsoft.Json;
 using QuantConnect;
@@ -30,7 +31,7 @@ namespace LucrumLabs.Algorithm
         /// <summary>
         /// Minimum size of wick of indecision bar in the opposite direction
         /// </summary>
-        private const decimal IndecisionWickRatioMin = 0.1m;
+        private const decimal IndecisionWickRatioMin = 0.05m;
 
         /// <summary>
         /// Minimum distance from the edge of the bank for the indecision bar body
@@ -51,7 +52,7 @@ namespace LucrumLabs.Algorithm
         /// Maximum normalized distance of setup bar to mid BB, 1.0 disables this check
         /// </summary>
         private const decimal SetupCloseMidBBMax = 1m;
-
+    
         /// <summary>
         /// How large the setup bar needs to be relative to the ATR, 0 disables this
         /// </summary>
@@ -64,7 +65,7 @@ namespace LucrumLabs.Algorithm
 
         private TimeSpan TradingTimeFrame = TimeSpan.FromHours(24);
 
-        private readonly string[] PAIRS = ForexPairs.MAJORS;
+        private readonly string[] PAIRS = ForexPairs.MAJORS_28;
 
         private Dictionary<Symbol, RollingWindow<QuoteBar>> _setupWindow = new Dictionary<Symbol, RollingWindow<QuoteBar>>();
         private Dictionary<Symbol, RollingWindow<IndicatorDataPoint>> _bbUpperWindow = new Dictionary<Symbol, RollingWindow<IndicatorDataPoint>>();
@@ -242,8 +243,9 @@ namespace LucrumLabs.Algorithm
                     setupRatios.Top < SetupWickRatioMax) // Small wick in direction of trade
                 {
                     Console.WriteLine(
-                        "{0} LONG setup: H/L: {1}/{2}, spread: {3}",
+                        "{0} {1} LONG setup: H/L: {2}/{3}, spread: {4}",
                         thisBar.Time,
+                        symbol,
                         thisBar.High,
                         thisBar.Low,
                         spread
@@ -259,8 +261,9 @@ namespace LucrumLabs.Algorithm
                          setupRatios.Bottom < SetupWickRatioMax)
                 {
                     Console.WriteLine(
-                        "{0} SHORT setup: H/L: {1}/{2}, spread: {3}",
+                        "{0} {1} SHORT setup: H/L: {2}/{3}, spread: {4}",
                         thisBar.Time,
+                        symbol,
                         thisBar.High,
                         thisBar.Low,
                         spread
@@ -272,14 +275,38 @@ namespace LucrumLabs.Algorithm
 
         private void TryOpenTrade(QuoteBar setupBar, OrderDirection direction)
         {
-            var symbol = setupBar.Symbol;
-            if (_activeTrades.ContainsKey(symbol))
+            bool canTrade = true;
+            var ticker = setupBar.Symbol;
+
+            if (_activeTrades.ContainsKey(ticker))
             {
-                return;
+                // todo: check if trade has been entered yet
+                Console.WriteLine("{0} - We currently have a pending trade.. bailing on {1} idea", setupBar.Time, ticker);
+                canTrade = false;
+                
+                // Record for analysis purposes
+                TradeSetupData setupData = new TradeSetupData() {
+                    BarTime = setupBar.Time.ConvertToUtc(TimeZone),
+                    direction = direction.ToString(),
+                    slPips = 0,
+                    tpPips = 0,
+                    plPips = 0,
+                    symbol = ticker,
+                    tradeIndex = -1
+                };
+                _results.TradeSetups.Add(setupData);
             }
 
-            ParallaxTrade trade = _activeTrades[symbol] = new ParallaxTrade(this, setupBar, symbol.Value, direction);
-            trade.PlaceOrders();
+            if (canTrade)
+            {
+                ParallaxTrade trade = _activeTrades[ticker] = new ParallaxTrade(
+                    this,
+                    setupBar,
+                    ticker.Value,
+                    direction
+                );
+                trade.PlaceOrders();
+            }
         }
 
         private void CleanupTrades()
@@ -358,7 +385,8 @@ namespace LucrumLabs.Algorithm
 
         public override void OnOrderEvent(OrderEvent orderEvent)
         {
-            foreach (var trade in _activeTrades.Values)
+            var trades = _activeTrades.Values.ToList();
+            foreach (var trade in trades)
             {
                 if (trade.HasOrderId(orderEvent.OrderId))
                 {

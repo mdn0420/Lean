@@ -6,9 +6,9 @@ import os
 
 #pwd = os.path.abspath('')
 script_dir = os.path.dirname(__file__) #<-- absolute dir the script is in
-result_dir = os.path.join (script_dir, "../../results/parallax/backtest2")
-algo_result_filepath = os.path.join(result_dir, "USDCAD-H4.json")
-analysis_data_filepath = os.path.join(result_dir, "USDCAD-H4-analysis_data.json")
+result_dir = os.path.join (script_dir, "../../results/parallax/backtest3")
+algo_result_filepath = os.path.join(result_dir, "ParallaxAlgorithm.json")
+analysis_data_filepath = os.path.join(result_dir, "2016-2019_Major7-analysis_data.json")
 
 include_hours = True
     
@@ -27,6 +27,7 @@ for row in trade_setups_df.itertuples():
         value = 1
     else:
         value = -1
+    symbol = row.symbol
         
-    line = f'd := t == timestamp({dt.year}, {dt.month}, {dt.day}, {hour}, 0, 0) ? {value} : d'
+    line = f'd := syminfo.ticker == "{symbol}" and t == timestamp({dt.year}, {dt.month}, {dt.day}, {hour}, 0, 0) ? {value} : d'
     print(line)
