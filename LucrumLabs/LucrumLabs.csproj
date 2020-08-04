@@ -48,12 +48,15 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Algorithm\AlgorithmResults.cs" />
+    <Compile Include="Algorithm\InsideBarAlgorithm.cs" />
+    <Compile Include="Algorithm\InsideBarTrade.cs" />
     <Compile Include="Algorithm\ParallaxTradeSetup.cs" />
     <Compile Include="Algorithm\ResultBarData.cs" />
     <Compile Include="Algorithm\EmaForexAlgorithm.cs" />
     <Compile Include="Algorithm\ParallaxTrade.cs" />
     <Compile Include="Algorithm\ParallaxAlgorithm.cs" />
     <Compile Include="Algorithm\TradeSetupData.cs" />
+    <Compile Include="AlgoUtils.cs" />
     <Compile Include="BarUtils.cs" />
     <Compile Include="Data\SmoothQuoteBarConsolidator.cs" />
     <Compile Include="ForexPairs.cs" />
@@ -61,6 +64,7 @@
     <Compile Include="MathUtils.cs" />
     <Compile Include="TestAlgorithm.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Trades\ManagedTrade.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Algorithm.Framework\QuantConnect.Algorithm.Framework.csproj">

@@ -66,13 +66,13 @@ namespace LucrumLabs.Algorithm
                 var risk = totalRisk * 0.5m;
                 _trade1 = new ParallaxTrade(_algorithm, _setupBar, _direction, 0.236m, 0.786m, -1.618m, risk);
                 _trade2 = new ParallaxTrade(_algorithm, _setupBar, _direction, 0.382m, 0.786m, -1.618m, risk);
-                _trade1.PlaceOrders();
-                _trade2.PlaceOrders();
+                _trade1.Execute();
+                _trade2.Execute();
             }
             else
             {
                 _trade1 = new ParallaxTrade(_algorithm, _setupBar, _direction, 0.236m, 0.786m, -1.618m, totalRisk);
-                _trade1.PlaceOrders();
+                _trade1.Execute();
             }
         }
 
