@@ -18,7 +18,7 @@ namespace LucrumLabs
             {
                 // dt is start time of the data slice
                 var nyc = dt.ConvertTo(fromTz, TimeZones.NewYork).RoundUp(TimeSpan.FromHours(1));
-                int closeHour = 0; // 5pm)
+                int closeHour = 17; // 5pm)
                 if (nyc.Hour <= closeHour)
                 {
                     nyc = nyc.AddHours(closeHour - nyc.Hour);

@@ -63,28 +63,29 @@ namespace LucrumLabs.Algorithm
         /// </summary>
         private const int MaxSetupFibRetracement = 1;
 
-        private TimeSpan TradingTimeFrame = TimeSpan.FromHours(24);
+        protected TimeSpan TradingTimeFrame = TimeSpan.FromHours(24);
 
-        private readonly string[] PAIRS = ForexPairs.MAJORS_28;
+        protected readonly string[] PAIRS = ForexPairs.MAJORS_28;
 
-        private Dictionary<Symbol, RollingWindow<QuoteBar>> _setupWindow = new Dictionary<Symbol, RollingWindow<QuoteBar>>();
-        private Dictionary<Symbol, RollingWindow<IndicatorDataPoint>> _bbUpperWindow = new Dictionary<Symbol, RollingWindow<IndicatorDataPoint>>();
-        private Dictionary<Symbol, RollingWindow<IndicatorDataPoint>> _bbLowerWindow = new Dictionary<Symbol, RollingWindow<IndicatorDataPoint>>();
-        private Dictionary<Symbol, RollingWindow<IndicatorDataPoint>> _bbMidWindow = new Dictionary<Symbol, RollingWindow<IndicatorDataPoint>>();
+        protected Dictionary<Symbol, RollingWindow<QuoteBar>> _setupWindow = new Dictionary<Symbol, RollingWindow<QuoteBar>>();
+        protected Dictionary<Symbol, RollingWindow<IndicatorDataPoint>> _bbUpperWindow = new Dictionary<Symbol, RollingWindow<IndicatorDataPoint>>();
+        protected Dictionary<Symbol, RollingWindow<IndicatorDataPoint>> _bbLowerWindow = new Dictionary<Symbol, RollingWindow<IndicatorDataPoint>>();
+        protected Dictionary<Symbol, RollingWindow<IndicatorDataPoint>> _bbMidWindow = new Dictionary<Symbol, RollingWindow<IndicatorDataPoint>>();
 
-        private Dictionary<Symbol, ParallaxTradeSetup> _activeTrades = new Dictionary<Symbol, ParallaxTradeSetup>();
-        private List<Symbol> _activeSymbols = new List<Symbol>();
+        protected Dictionary<Symbol, ParallaxTradeSetup> _activeTrades = new Dictionary<Symbol, ParallaxTradeSetup>();
+        protected List<Symbol> _activeSymbols = new List<Symbol>();
 
-        private AlgorithmResults _results = new AlgorithmResults();
+        protected AlgorithmResults _results = new AlgorithmResults();
         
-        private Dictionary<Symbol, Stochastic> _stochastics = new Dictionary<Symbol, Stochastic>();
-        private Dictionary<Symbol, BollingerBands> _bollingerBands = new Dictionary<Symbol, BollingerBands>();
-        private Dictionary<Symbol, AverageTrueRange> _atrs = new Dictionary<Symbol, AverageTrueRange>();
+        protected Dictionary<Symbol, Stochastic> _stochastics = new Dictionary<Symbol, Stochastic>();
+        protected Dictionary<Symbol, BollingerBands> _bollingerBands = new Dictionary<Symbol, BollingerBands>();
+        protected Dictionary<Symbol, AverageTrueRange> _atrs = new Dictionary<Symbol, AverageTrueRange>();
+
+        protected ParallaxTradeSettings _tradeSettings;
 
         public override void Initialize()
         {
-            SetStartDate(2016, 1, 1);
-            SetEndDate(2019, 12, 31);
+            SetupDates();
             SetCash(100000);
             
             SetBrokerageModel(BrokerageName.OandaBrokerage);
@@ -94,6 +95,20 @@ namespace LucrumLabs.Algorithm
             {
                 SetupPair(symbol);
             }
+
+            _tradeSettings = GetTradeSettings();
+        }
+
+        protected virtual void SetupDates()
+        {
+            SetStartDate(2016, 1, 1);
+            SetEndDate(2019, 12, 31);
+        }
+
+        protected virtual ParallaxTradeSettings GetTradeSettings()
+        {
+            var result = new ParallaxTradeSettings();
+            return result;
         }
 
         private void SetupPair(string ticker)
@@ -132,7 +147,7 @@ namespace LucrumLabs.Algorithm
                 bar.Low,
                 bar.Close
             );
-            debugStr += string.Format("BBMid:{0:F5} Up: {1:F5} Low: {2:F5}", _bb.MiddleBand, _bb.UpperBand, _bb.LowerBand);
+            //debugStr += string.Format("BBMid:{0:F5} Up: {1:F5} Low: {2:F5}", _bb.MiddleBand, _bb.UpperBand, _bb.LowerBand);
             Console.WriteLine(debugStr);
             #endif
 
@@ -163,7 +178,7 @@ namespace LucrumLabs.Algorithm
             CheckSetup(symbol);
         }
 
-        private void CheckSetup(Symbol symbol)
+        protected virtual void CheckSetup(Symbol symbol)
         {
             var window = _setupWindow[symbol];
             if (!window.IsReady)
@@ -240,7 +255,7 @@ namespace LucrumLabs.Algorithm
             }
         }
 
-        private void TryOpenTrade(QuoteBar ibar, QuoteBar setupBar, OrderDirection direction)
+        protected void TryOpenTrade(QuoteBar ibar, QuoteBar setupBar, OrderDirection direction)
         {
             bool canTrade = true;
             var ticker = setupBar.Symbol;
@@ -270,7 +285,8 @@ namespace LucrumLabs.Algorithm
                     this,
                     ibar,
                     setupBar,
-                    direction
+                    direction,
+                    _tradeSettings
                 );
                 _activeSymbols.Add(ticker);
                 trade.PlaceOrders();
@@ -286,6 +302,11 @@ namespace LucrumLabs.Algorithm
                 {
                     remove.Add(kvp.Key);
                 }
+            }
+
+            if (remove.Count > 0)
+            {
+                Console.WriteLine("Cleaning up {0} trades", remove.Count);
             }
 
             foreach (var symbol in remove)
@@ -365,30 +386,6 @@ namespace LucrumLabs.Algorithm
             }
             
             CleanupTrades();
-        }
-
-        public int CalculatePositionSize(Forex pair, decimal pips, decimal balance, decimal riskPercent)
-        {
-            var quoteCurrency = pair.QuoteCurrency;
-
-            int lotSize = 0;
-            decimal pipSize = ForexUtils.GetPipSize(pair);
-
-            if (quoteCurrency.ConversionRate <= 0m)
-            {
-                Error("Could not find account conversion rate when calculating position size");
-                return 0;
-            }
-            
-            // risk amount in the quote currency
-            decimal riskAmount = balance * riskPercent / quoteCurrency.ConversionRate;
-
-            decimal unitsPerCurrency = 1m / pipSize;
-            var pipValue = riskAmount / pips;
-            lotSize = (int)(pipValue * unitsPerCurrency);
-
-            //Debug(string.Format("Lot size: {0}, Risk: {1:P1}, Balance: {2:C}, Price: {3}, ConversionRate: {4}", lotSize, riskPercent, balance, pair.Price, quoteCurrency.ConversionRate));
-            return lotSize;
         }
 
         public override void OnEndOfAlgorithm()

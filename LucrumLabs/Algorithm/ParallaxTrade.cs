@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Security.Policy;
 using LucrumLabs.Trades;
+using NodaTime;
 using QuantConnect;
 using QuantConnect.Data.Market;
 using QuantConnect.Orders;
@@ -19,7 +20,7 @@ namespace LucrumLabs.Algorithm
         /// </summary>
         private const decimal ExpireFibLevel = -0.382m;
 
-        private bool activeTradeManagementEnabled = true;
+        private bool _activeTradeManagementEnabled;
 
 
         private int _slLlevel = -1;
@@ -33,15 +34,15 @@ namespace LucrumLabs.Algorithm
         private decimal _riskPercent;
         private decimal _riskPips;
         private decimal _tpPips;
-        private decimal _profitLossPips;
 
         private decimal _extensionPrice;
 
-        // LEAN Trade object associated with this
-        private Trade _trade;
-
         // For internal tracking purposes
+        protected override string TradeName => _tradeName;
         private string _tradeName;
+
+        // True if price hit extension before entering
+        private bool _expired;
 
         public ParallaxTrade(ParallaxAlgorithm algorithm, 
             QuoteBar setupBar, 
@@ -50,6 +51,7 @@ namespace LucrumLabs.Algorithm
             decimal slFib, 
             decimal tpFib, 
             decimal riskPercent,
+            bool activeManagement,
             string tag="") : base(algorithm, setupBar.Symbol, direction, OrderType.Limit)
         {
             _setupBar = setupBar;
@@ -57,6 +59,7 @@ namespace LucrumLabs.Algorithm
             _entryFib = entryFib;
             _slFib = slFib;
             _tpFib = tpFib;
+            _activeTradeManagementEnabled = activeManagement;
             
             if (string.IsNullOrEmpty(tag))
             {
@@ -78,16 +81,15 @@ namespace LucrumLabs.Algorithm
 
             _entryPrice = GetFibPrice(_entryFib);
             
-            /*
-             var spread = _setupBar.GetSpread();
+            // adjust entry price by 1 pip
             if (_direction == OrderDirection.Buy)
             {
-                _entryPrice -= spread * 2m;
+                _entryPrice -= pipSize;
             }
             else
             {
-                _entryPrice += spread * 2m;
-            }*/
+                _entryPrice += pipSize;
+            }
             
             _slPrice = GetFibPrice(_slFib);
             _tpPrice = GetFibPrice(_tpFib);
@@ -164,7 +166,7 @@ namespace LucrumLabs.Algorithm
                 return;
             }
             
-            if (_state != TradeState.OPEN)
+            if (_state == TradeState.PENDING)
             {
                 // Cancel order if we haven't filled and we already hit the first extension level
                 var price = bar.Price;
@@ -172,13 +174,14 @@ namespace LucrumLabs.Algorithm
                                            (_direction == OrderDirection.Sell && price < _extensionPrice);
                 if (cancelFromExtension)
                 {
+                    _expired = true;
                     Console.WriteLine("{0} - Price ran to extension before entry order filled.. cancelling {1} trade.", _algorithm.Time, _tradeName);
                     Close();
                 }
             }
             else if (_state == TradeState.OPEN)
             {
-                if (activeTradeManagementEnabled)
+                if (_activeTradeManagementEnabled)
                 {
                     var price = bar.Price;
                     if (_slLlevel < 0)
@@ -254,14 +257,26 @@ namespace LucrumLabs.Algorithm
 
         public TradeSetupData GetStats()
         {
+            var fillPrice = 0m;
+            if (_entryOrder.QuantityFilled != 0)
+            {
+                fillPrice = _entryOrder.AverageFillPrice;
+            }
             TradeSetupData result = new TradeSetupData()
             {
                 BarTime = _setupBar.Time.ConvertToUtc(_algorithm.TimeZone),
                 direction = _direction.ToString(),
+                entryPrice = _entryPrice,
+                entryTime = _entryTimeUtc,
+                closeTime = _closeTimeUtc,
+                fillPrice = fillPrice,
+                slPrice = _slPrice,
+                tpPrice = _tpPrice,
                 slPips = _riskPips,
                 tpPips = _tpPips,
                 plPips = _profitLossPips,
                 symbol = _symbol,
+                canceled = _expired,
                 tradeIndex = _algorithm.TradeBuilder.ClosedTrades.IndexOf(_trade)
             };
             return result;

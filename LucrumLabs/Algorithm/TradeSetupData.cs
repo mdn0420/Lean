@@ -10,6 +10,15 @@ namespace LucrumLabs.Algorithm
 
         public string direction;
 
+        public decimal entryPrice;
+        public decimal slPrice;
+        public decimal tpPrice;
+
+        public DateTime entryTime;
+        public decimal fillPrice;
+        public DateTime closeTime;
+        public bool canceled;
+
         public decimal slPips;
         public decimal tpPips;
         public decimal plPips;

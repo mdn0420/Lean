@@ -1,9 +1,12 @@
 using System;
+using System.Linq;
 using QuantConnect;
 using QuantConnect.Algorithm;
 using QuantConnect.Data.Market;
 using QuantConnect.Orders;
 using QuantConnect.Securities;
+using QuantConnect.Securities.Forex;
+using QuantConnect.Statistics;
 
 namespace LucrumLabs.Trades
 {
@@ -30,12 +33,21 @@ namespace LucrumLabs.Trades
 
         protected OrderType _entryOrderType;
 
+        protected DateTime _entryTimeUtc = DateTime.MinValue;
+        protected DateTime _closeTimeUtc = DateTime.MinValue;
+
         public TradeState State => _state;
         protected TradeState _state;
         protected OrderTicket _entryOrder;
         protected OrderTicket _slOrder;
         protected OrderTicket _tpOrder;
         protected OrderTicket _closeOrder; // Manual exit order
+
+        protected decimal _profitLossPips;
+
+        protected Trade _trade;
+
+        protected virtual string TradeName => _symbol;
         
         public ManagedTrade(QCAlgorithm algorithm, Symbol symbol, OrderDirection direction, OrderType entryOrderType)
         {
@@ -103,6 +115,7 @@ namespace LucrumLabs.Trades
         /// </summary>
         public void Close()
         {
+            _closeTimeUtc = _algorithm.Time.ConvertToUtc(_algorithm.TimeZone);
             bool slOrTpHit = (_slOrder != null && _slOrder.QuantityFilled != 0) ||
                              (_tpOrder != null && _tpOrder.QuantityFilled != 0);
             if (_entryOrder != null && !_entryOrder.Status.IsClosed())
@@ -145,15 +158,16 @@ namespace LucrumLabs.Trades
             {
                 if (orderEvent.Status == OrderStatus.Filled)
                 {
+                    _entryTimeUtc = orderEvent.UtcTime;
                     // Setup TP/SL orders
-                    Console.WriteLine("{0} - Entered {1} trade for {2:N0} {3} @ {4}", _algorithm.Time, _direction, orderEvent.Quantity, _symbol, orderEvent.FillPrice);
+                    Console.WriteLine("{0} - Entered {1} trade for {2:N0} {3} @ {4}", _algorithm.Time, _direction, orderEvent.Quantity, TradeName, orderEvent.FillPrice);
                     _state = TradeState.OPEN;
                     //_algorithm.PrintBalance();
                     PlaceManagementOrders();
                 } 
                 else if (orderEvent.Status == OrderStatus.Canceled)
                 {
-                    Console.WriteLine("{0} - Trade for {1} cancelled", _algorithm.Time, _symbol);
+                    Console.WriteLine("{0} - Trade for {1} cancelled", _algorithm.Time, TradeName);
                     Close();
                 }
                 else if (orderEvent.Status == OrderStatus.Invalid)
@@ -166,15 +180,13 @@ namespace LucrumLabs.Trades
             {
                 if (orderEvent.Status == OrderStatus.Filled)
                 {
-                    /*
                     UpdateProfitLoss();
                     Console.WriteLine(
-                        "{0} - Stop loss hit for {1} at {2} - P/L: {3}",
+                        "{0} - Stop loss hit for {1} at {2}",
                         _algorithm.Time,
-                        _symbol,
-                        orderEvent.FillPrice,
-                        _profitLossPips
-                    );*/
+                        TradeName,
+                        orderEvent.FillPrice
+                    );
                     Close();
                 }
             }
@@ -182,15 +194,13 @@ namespace LucrumLabs.Trades
             {
                 if (orderEvent.Status == OrderStatus.Filled)
                 {
-                    /*
                     UpdateProfitLoss();
                     Console.WriteLine(
-                            "{0} - Take profit hit for {1} at {2} - P/L: {3}",
+                            "{0} - Take profit hit for {1} at {2}",
                             _algorithm.Time,
-                            _symbol,
-                            orderEvent.FillPrice,
-                            _profitLossPips
-                    );*/
+                            TradeName,
+                            orderEvent.FillPrice
+                    );
                     Close();
                 }
             }
@@ -207,6 +217,24 @@ namespace LucrumLabs.Trades
         public virtual void OnDataUpdate(QuoteBar bar)
         {
             
+        }
+        
+        private void UpdateProfitLoss()
+        {
+            _trade = _algorithm.TradeBuilder.ClosedTrades.Last();
+            if (_trade != null)
+            {
+                Forex pair = _algorithm.Securities[_symbol] as Forex;
+                var pipSize = ForexUtils.GetPipSize(pair);
+                if (_direction == OrderDirection.Buy)
+                {
+                    _profitLossPips = (_trade.ExitPrice - _trade.EntryPrice) / pipSize;
+                }
+                else
+                {
+                    _profitLossPips = (_trade.EntryPrice - _trade.ExitPrice) / pipSize;
+                }
+            }
         }
         
         protected void RoundPrice(ref decimal value)
