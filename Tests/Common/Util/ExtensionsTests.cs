@@ -666,6 +666,28 @@ namespace QuantConnect.Tests.Common.Util
             Assert.AreEqual(decimal.MinValue, output);
         }
 
+        [TestCase(Language.CSharp, double.NaN)]
+        [TestCase(Language.Python, double.NaN)]
+        [TestCase(Language.CSharp, double.NegativeInfinity)]
+        [TestCase(Language.Python, double.NegativeInfinity)]
+        [TestCase(Language.CSharp, double.PositiveInfinity)]
+        [TestCase(Language.Python, double.PositiveInfinity)]
+        public void SafeDecimalCastThrowsArgumentException(Language language, double number)
+        {
+            if (language == Language.CSharp)
+            {
+                Assert.Throws<ArgumentException>(() => number.SafeDecimalCast());
+                return;
+            }
+
+            using (Py.GIL())
+            {
+                var pyNumber = number.ToPython();
+                var csNumber = pyNumber.As<double>();
+                Assert.Throws<ArgumentException>(() => csNumber.SafeDecimalCast());
+            }
+        }
+
         [Test]
         [TestCase(1.200, "1.2")]
         [TestCase(1200, "1200")]
@@ -1125,6 +1147,17 @@ actualDictionary.update({'IBM': 5})
             Assert.AreEqual(second, func(first));
             Assert.AreEqual(Time.EndOfTime, func(second));
             Assert.AreEqual(Time.EndOfTime, func(second));
+        }
+
+        [Test]
+        [TestCase(OptionRight.Call, true, OrderDirection.Sell)]
+        [TestCase(OptionRight.Call, false, OrderDirection.Buy)]
+        [TestCase(OptionRight.Put, true, OrderDirection.Buy)]
+        [TestCase(OptionRight.Put, false, OrderDirection.Sell)]
+        public void GetsExerciseDirection(OptionRight right, bool isShort, OrderDirection expected)
+        {
+            var actual = right.GetExerciseDirection(isShort);
+            Assert.AreEqual(expected, actual);
         }
 
         private PyObject ConvertToPyObject(object value)

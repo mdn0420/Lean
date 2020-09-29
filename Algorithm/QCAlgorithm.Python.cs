@@ -474,6 +474,53 @@ namespace QuantConnect.Algorithm
         /// </summary>
         /// <param name="symbol">The symbol to register against</param>
         /// <param name="indicator">The indicator to receive data from the consolidator</param>
+        /// <param name="pyObject">The python object that it is trying to register with, could be consolidator or a timespan</param>
+        /// <param name="selector">Selects a value from the BaseData send into the indicator, if null defaults to a cast (x => (T)x)</param>
+        public void RegisterIndicator(Symbol symbol, PyObject indicator, PyObject pyObject, PyObject selector = null)
+        {
+            try
+            {
+                // First check if this is just a regular IDataConsolidator
+                IDataConsolidator dataConsolidator;
+                if (!pyObject.TryConvert(out dataConsolidator))
+                {
+                    // If not then try and wrap it as a custom Python consolidator
+                    dataConsolidator = new DataConsolidatorPythonWrapper(pyObject);
+                }
+                RegisterIndicator(symbol, indicator, dataConsolidator, selector);
+                return;
+            }
+            catch
+            {
+
+            }     
+
+            // Finally, since above didn't work, just try it as a timespan
+            // Issue #4668 Fix
+            using (Py.GIL())
+            {
+                try
+                {
+                    // tryConvert does not work for timespan
+                    TimeSpan? timeSpan = pyObject.As<TimeSpan>();
+                    if (timeSpan != default(TimeSpan))
+                    {
+                        RegisterIndicator(symbol, indicator, timeSpan, selector);
+                    }
+                }
+                catch 
+                {
+                    throw new ArgumentException("Invalid third argument, should be either a valid consolidator or timedelta object");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Registers the consolidator to receive automatic updates as well as configures the indicator to receive updates
+        /// from the consolidator.
+        /// </summary>
+        /// <param name="symbol">The symbol to register against</param>
+        /// <param name="indicator">The indicator to receive data from the consolidator</param>
         /// <param name="consolidator">The consolidator to receive raw subscription data</param>
         /// <param name="selector">Selects a value from the BaseData send into the indicator, if null defaults to a cast (x => (T)x)</param>
         public void RegisterIndicator(Symbol symbol, PyObject indicator, IDataConsolidator consolidator, PyObject selector = null)
@@ -732,8 +779,8 @@ namespace QuantConnect.Algorithm
 
                 var res = GetResolution(x, resolution);
                 var exchange = GetExchangeHours(x);
-                var start = _historyRequestFactory.GetStartTimeAlgoTz(x, periods, res, exchange);
-                return _historyRequestFactory.CreateHistoryRequest(config, start, Time.RoundDown(res.ToTimeSpan()), exchange, res);
+                var start = _historyRequestFactory.GetStartTimeAlgoTz(x, periods, res, exchange, config.DataTimeZone);
+                return _historyRequestFactory.CreateHistoryRequest(config, start, Time, exchange, res);
             });
 
             return PandasConverter.GetDataFrame(History(requests.Where(x => x != null)).Memoize());
@@ -794,9 +841,9 @@ namespace QuantConnect.Algorithm
             if (resolution == Resolution.Tick) throw new ArgumentException("History functions that accept a 'periods' parameter can not be used with Resolution.Tick");
 
             var res = GetResolution(symbol, resolution);
-            var start = _historyRequestFactory.GetStartTimeAlgoTz(symbol, periods, res, GetExchangeHours(symbol));
-            var end = Time.RoundDown(res.ToTimeSpan());
-            return History(type, symbol, start, end, resolution);
+            var marketHours = GetMarketHours(symbol);
+            var start = _historyRequestFactory.GetStartTimeAlgoTz(symbol, periods, res, marketHours.ExchangeHours, marketHours.DataTimeZone);
+            return History(type, symbol, start, Time, resolution);
         }
 
         /// <summary>

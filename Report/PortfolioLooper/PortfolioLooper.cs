@@ -30,6 +30,7 @@ using QuantConnect.Util;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using QuantConnect.Lean.Engine.HistoricalData;
 
 namespace QuantConnect.Report
 {
@@ -68,7 +69,7 @@ namespace QuantConnect.Report
             var factorFileProvider = Composer.Instance.GetExportedValueByTypeName<IFactorFileProvider>("LocalDiskFactorFileProvider");
             var mapFileProvider = Composer.Instance.GetExportedValueByTypeName<IMapFileProvider>("LocalDiskMapFileProvider");
             var dataCacheProvider = new ZipDataCacheProvider(new DefaultDataProvider(), false);
-            var historyProvider = Composer.Instance.GetExportedValueByTypeName<IHistoryProvider>("SubscriptionDataReaderHistoryProvider");
+            var historyProvider = new SubscriptionDataReaderHistoryProvider();
 
             var dataPermissionManager = new DataPermissionManager();
             historyProvider.Initialize(new HistoryProviderInitializeParameters(null, null, null, dataCacheProvider, mapFileProvider, factorFileProvider, (_) => { }, false, dataPermissionManager));
@@ -91,7 +92,8 @@ namespace QuantConnect.Report
                         Algorithm,
                         RegisteredSecurityDataTypesProvider.Null,
                         new SecurityCacheProvider(Algorithm.Portfolio)),
-                    dataPermissionManager),
+                    dataPermissionManager,
+                    new DefaultDataProvider()),
                 Algorithm,
                 Algorithm.TimeKeeper,
                 marketHoursDatabase,
@@ -198,25 +200,26 @@ namespace QuantConnect.Report
         private static IEnumerable<Slice> GetHistory(IAlgorithm algorithm, List<Security> securities, Resolution resolution)
         {
             var historyRequests = new List<Data.HistoryRequest>();
+            var historyRequestFactory = new HistoryRequestFactory(algorithm);
 
             // Create the history requests
             foreach (var security in securities)
             {
-                var historyRequestFactory = new HistoryRequestFactory(algorithm);
                 var configs = algorithm.SubscriptionManager
                     .SubscriptionDataConfigService
                     .GetSubscriptionDataConfigs(security.Symbol, includeInternalConfigs: true);
+
+                // we need to order and select a specific configuration type
+                // so the conversion rate is deterministic
+                var configToUse = configs.OrderBy(x => x.TickType).First();
 
                 var startTime = historyRequestFactory.GetStartTimeAlgoTz(
                     security.Symbol,
                     1,
                     resolution,
-                    security.Exchange.Hours);
+                    security.Exchange.Hours,
+                    configToUse.DataTimeZone);
                 var endTime = algorithm.EndDate;
-
-                // we need to order and select a specific configuration type
-                // so the conversion rate is deterministic
-                var configToUse = configs.OrderBy(x => x.TickType).First();
 
                 historyRequests.Add(historyRequestFactory.CreateHistoryRequest(
                     configToUse,
@@ -322,13 +325,24 @@ namespace QuantConnect.Report
                 Algorithm.SetDateTime(order.Time);
 
                 var orderSecurity = Algorithm.Securities[order.Symbol];
-                if (order.LastFillTime == null)
+                DateTime lastFillTime;
+
+                if ((order.Type == OrderType.MarketOnOpen || order.Type == OrderType.MarketOnClose) &&
+                    (order.Status == OrderStatus.Filled || order.Status == OrderStatus.PartiallyFilled) && order.LastFillTime == null)
+                {
+                    lastFillTime = order.Time;
+                }
+                else if (order.LastFillTime == null)
                 {
                     Log.Trace($"Order with ID: {order.Id} has been skipped because of null LastFillTime");
                     continue;
                 }
+                else
+                {
+                    lastFillTime = order.LastFillTime.Value;
+                }
 
-                var tick = new Tick { Quantity = order.Quantity, AskPrice = order.Price, BidPrice = order.Price, Value = order.Price, EndTime = order.LastFillTime.Value };
+                var tick = new Tick { Quantity = order.Quantity, AskPrice = order.Price, BidPrice = order.Price, Value = order.Price, EndTime = lastFillTime };
 
                 // Set the market price of the security
                 orderSecurity.SetMarketPrice(tick);

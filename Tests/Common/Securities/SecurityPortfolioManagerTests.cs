@@ -32,6 +32,7 @@ using QuantConnect.Brokerages.Backtesting;
 using QuantConnect.Tests.Engine;
 using QuantConnect.Algorithm;
 using QuantConnect.Data.UniverseSelection;
+using QuantConnect.Lean.Engine.Results;
 using QuantConnect.Orders.Fees;
 using QuantConnect.Tests.Engine.DataFeeds;
 
@@ -55,6 +56,20 @@ namespace QuantConnect.Tests.Common.Securities
             {"USDJWB", USDJWB},
             {"JWBUSD", JWBUSD},
         };
+
+        private IResultHandler _resultHandler;
+
+        [SetUp]
+        public void SetUp()
+        {
+            _resultHandler = new TestResultHandler(Console.WriteLine);
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            _resultHandler.Exit();
+        }
 
         [Test]
         public void TestCashFills()
@@ -1203,7 +1218,7 @@ namespace QuantConnect.Tests.Common.Securities
             var portfolio = new SecurityPortfolioManager(securities, transactions);
 
             algorithm.Securities = securities;
-            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), new TestResultHandler(Console.WriteLine));
+            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), _resultHandler);
             transactions.SetOrderProcessor(transactionHandler);
 
             // Adding cash: strike price times number of shares
@@ -1240,7 +1255,12 @@ namespace QuantConnect.Tests.Common.Securities
             var order = (OptionExerciseOrder)transactions.GetOrders(x => true).First();
             option.Underlying = securities[Symbols.SPY];
 
-            var fills = option.OptionExerciseModel.OptionExercise(option, order);
+            var fills = option.OptionExerciseModel.OptionExercise(option, order).ToList();
+
+            Assert.AreEqual(2, fills.Count);
+            Assert.IsFalse(fills[0].IsAssignment);
+            Assert.AreEqual("Automatic Exercise", fills[0].Message);
+            Assert.AreEqual("Option Exercise", fills[1].Message);
 
             foreach (var fill in fills)
             {
@@ -1267,7 +1287,7 @@ namespace QuantConnect.Tests.Common.Securities
             var portfolio = new SecurityPortfolioManager(securities, transactions);
 
             algorithm.Securities = securities;
-            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), new TestResultHandler(Console.WriteLine));
+            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), _resultHandler);
             transactions.SetOrderProcessor(transactionHandler);
 
             portfolio.SetCash(0);
@@ -1303,7 +1323,10 @@ namespace QuantConnect.Tests.Common.Securities
             var order = (OptionExerciseOrder)transactions.GetOrders(x => true).First();
             option.Underlying = securities[Symbols.SPY];
 
-            var fills = option.OptionExerciseModel.OptionExercise(option, order);
+            var fills = option.OptionExerciseModel.OptionExercise(option, order).ToList();
+
+            Assert.AreEqual(1, fills.Count);
+            Assert.AreEqual("OTM", fills[0].Message);
 
             foreach (var fill in fills)
             {
@@ -1329,7 +1352,7 @@ namespace QuantConnect.Tests.Common.Securities
             var portfolio = new SecurityPortfolioManager(securities, transactions);
 
             algorithm.Securities = securities;
-            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), new TestResultHandler(Console.WriteLine));
+            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), _resultHandler);
             transactions.SetOrderProcessor(transactionHandler);
 
             portfolio.SetCash(0);
@@ -1366,7 +1389,10 @@ namespace QuantConnect.Tests.Common.Securities
             option.Underlying = securities[Symbols.SPY];
             option.ExerciseSettlement = SettlementType.Cash;
 
-            var fills = option.OptionExerciseModel.OptionExercise(option, order);
+            var fills = option.OptionExerciseModel.OptionExercise(option, order).ToList();
+
+            Assert.AreEqual(1, fills.Count);
+            Assert.AreEqual("OTM", fills[0].Message);
 
             foreach (var fill in fills)
             {
@@ -1393,7 +1419,7 @@ namespace QuantConnect.Tests.Common.Securities
             var portfolio = new SecurityPortfolioManager(securities, transactions);
 
             algorithm.Securities = securities;
-            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), new TestResultHandler(Console.WriteLine));
+            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), _resultHandler);
             transactions.SetOrderProcessor(transactionHandler);
             portfolio.SetCash(0);
 
@@ -1427,7 +1453,12 @@ namespace QuantConnect.Tests.Common.Securities
             var order = (OptionExerciseOrder)transactions.GetOrders(x => true).First();
             option.Underlying = securities[Symbols.SPY];
 
-            var fills = option.OptionExerciseModel.OptionExercise(option, order);
+            var fills = option.OptionExerciseModel.OptionExercise(option, order).ToList();
+
+            Assert.AreEqual(2, fills.Count);
+            Assert.IsFalse(fills[0].IsAssignment);
+            Assert.AreEqual("Automatic Exercise", fills[0].Message);
+            Assert.AreEqual("Option Exercise", fills[1].Message);
 
             foreach (var fill in fills)
             {
@@ -1455,7 +1486,7 @@ namespace QuantConnect.Tests.Common.Securities
             var portfolio = new SecurityPortfolioManager(securities, transactions);
 
             algorithm.Securities = securities;
-            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), new TestResultHandler(Console.WriteLine));
+            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), _resultHandler);
             transactions.SetOrderProcessor(transactionHandler);
 
             // Adding cash: strike price times number of shares
@@ -1492,7 +1523,12 @@ namespace QuantConnect.Tests.Common.Securities
             var order = (OptionExerciseOrder)transactions.GetOrders(x => true).First();
             option.Underlying = securities[Symbols.SPY];
 
-            var fills = option.OptionExerciseModel.OptionExercise(option, order);
+            var fills = option.OptionExerciseModel.OptionExercise(option, order).ToList();
+
+            Assert.AreEqual(2, fills.Count);
+            Assert.IsFalse(fills[0].IsAssignment);
+            Assert.AreEqual("Automatic Exercise", fills[0].Message);
+            Assert.AreEqual("Option Exercise", fills[1].Message);
 
             foreach (var fill in fills)
             {
@@ -1519,7 +1555,7 @@ namespace QuantConnect.Tests.Common.Securities
             var portfolio = new SecurityPortfolioManager(securities, transactions);
 
             algorithm.Securities = securities;
-            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), new TestResultHandler(Console.WriteLine));
+            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), _resultHandler);
             transactions.SetOrderProcessor(transactionHandler);
             portfolio.SetCash(0);
 
@@ -1554,7 +1590,12 @@ namespace QuantConnect.Tests.Common.Securities
             var order = (OptionExerciseOrder)transactions.GetOrders(x => true).First();
             option.Underlying = securities[Symbols.SPY];
 
-            var fills = option.OptionExerciseModel.OptionExercise(option, order);
+            var fills = option.OptionExerciseModel.OptionExercise(option, order).ToList();
+
+            Assert.AreEqual(2, fills.Count);
+            Assert.IsTrue(fills[0].IsAssignment);
+            Assert.AreEqual("Automatic Assignment", fills[0].Message);
+            Assert.AreEqual("Option Assignment", fills[1].Message);
 
             // we are simulating assignment by calling a method for this
             var portfolioModel = (OptionPortfolioModel)option.PortfolioModel;
@@ -1587,7 +1628,7 @@ namespace QuantConnect.Tests.Common.Securities
             var portfolio = new SecurityPortfolioManager(securities, transactions);
 
             algorithm.Securities = securities;
-            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), new TestResultHandler(Console.WriteLine));
+            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), _resultHandler);
             transactions.SetOrderProcessor(transactionHandler);
 
             // Adding cash: strike price times number of shares
@@ -1623,7 +1664,12 @@ namespace QuantConnect.Tests.Common.Securities
             var order = (OptionExerciseOrder)transactions.GetOrders(x => true).First();
             option.Underlying = securities[Symbols.SPY];
 
-            var fills = option.OptionExerciseModel.OptionExercise(option, order);
+            var fills = option.OptionExerciseModel.OptionExercise(option, order).ToList();
+
+            Assert.AreEqual(2, fills.Count);
+            Assert.IsTrue(fills[0].IsAssignment);
+            Assert.AreEqual("Automatic Assignment", fills[0].Message);
+            Assert.AreEqual("Option Assignment", fills[1].Message);
 
             // we are simulating assignment by calling a method for this
             var portfolioModel = (OptionPortfolioModel)option.PortfolioModel;
@@ -1653,7 +1699,7 @@ namespace QuantConnect.Tests.Common.Securities
             var portfolio = new SecurityPortfolioManager(securities, transactions);
 
             algorithm.Securities = securities;
-            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), new TestResultHandler(Console.WriteLine));
+            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), _resultHandler);
             transactions.SetOrderProcessor(transactionHandler);
 
             // Adding cash: strike price times number of shares
@@ -1689,7 +1735,12 @@ namespace QuantConnect.Tests.Common.Securities
             var order = (OptionExerciseOrder)transactions.GetOrders(x => true).First();
             option.Underlying = securities[Symbols.SPY];
 
-            var fills = option.OptionExerciseModel.OptionExercise(option, order);
+            var fills = option.OptionExerciseModel.OptionExercise(option, order).ToList();
+
+            Assert.AreEqual(2, fills.Count);
+            Assert.IsTrue(fills[0].IsAssignment);
+            Assert.AreEqual("Automatic Assignment", fills[0].Message);
+            Assert.AreEqual("Option Assignment", fills[1].Message);
 
             // we are simulating assignment by calling a method for this
             var portfolioModel = (OptionPortfolioModel)option.PortfolioModel;
@@ -1720,7 +1771,7 @@ namespace QuantConnect.Tests.Common.Securities
             var portfolio = new SecurityPortfolioManager(securities, transactions);
 
             algorithm.Securities = securities;
-            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), new TestResultHandler(Console.WriteLine));
+            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), _resultHandler);
             transactions.SetOrderProcessor(transactionHandler);
 
             portfolio.SetCash(0);
@@ -1757,7 +1808,11 @@ namespace QuantConnect.Tests.Common.Securities
             option.Underlying = securities[Symbols.SPY];
             option.ExerciseSettlement = SettlementType.Cash;
 
-            var fills = option.OptionExerciseModel.OptionExercise(option, order);
+            var fills = option.OptionExerciseModel.OptionExercise(option, order).ToList();
+
+            Assert.AreEqual(1, fills.Count);
+            Assert.IsFalse(fills[0].IsAssignment);
+            Assert.AreEqual("Automatic Exercise", fills[0].Message);
 
             foreach (var fill in fills)
             {
@@ -1782,7 +1837,7 @@ namespace QuantConnect.Tests.Common.Securities
             var portfolio = new SecurityPortfolioManager(securities, transactions);
 
             algorithm.Securities = securities;
-            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), new TestResultHandler(Console.WriteLine));
+            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), _resultHandler);
             transactions.SetOrderProcessor(transactionHandler);
 
             portfolio.SetCash(0);
@@ -1819,7 +1874,11 @@ namespace QuantConnect.Tests.Common.Securities
             option.Underlying = securities[Symbols.SPY];
             option.ExerciseSettlement = SettlementType.Cash;
 
-            var fills = option.OptionExerciseModel.OptionExercise(option, order);
+            var fills = option.OptionExerciseModel.OptionExercise(option, order).ToList();
+
+            Assert.AreEqual(1, fills.Count);
+            Assert.IsFalse(fills[0].IsAssignment);
+            Assert.AreEqual("OTM", fills[0].Message);
 
             foreach (var fill in fills)
             {
@@ -1844,7 +1903,7 @@ namespace QuantConnect.Tests.Common.Securities
             var portfolio = new SecurityPortfolioManager(securities, transactions);
 
             algorithm.Securities = securities;
-            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), new TestResultHandler(Console.WriteLine));
+            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), _resultHandler);
             transactions.SetOrderProcessor(transactionHandler);
             portfolio.SetCash(0);
 
@@ -1880,7 +1939,11 @@ namespace QuantConnect.Tests.Common.Securities
             option.Underlying = securities[Symbols.SPY];
             option.ExerciseSettlement = SettlementType.Cash;
 
-            var fills = option.OptionExerciseModel.OptionExercise(option, order);
+            var fills = option.OptionExerciseModel.OptionExercise(option, order).ToList();
+
+            Assert.AreEqual(1, fills.Count);
+            Assert.IsFalse(fills[0].IsAssignment);
+            Assert.AreEqual("Automatic Exercise", fills[0].Message);
 
             foreach (var fill in fills)
             {
@@ -2031,7 +2094,7 @@ namespace QuantConnect.Tests.Common.Securities
             var portfolio = new SecurityPortfolioManager(securities, transactions);
 
             algorithm.Securities = securities;
-            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), new TestResultHandler(Console.WriteLine));
+            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), _resultHandler);
             transactions.SetOrderProcessor(transactionHandler);
             portfolio.SetCash(0);
 
@@ -2067,7 +2130,11 @@ namespace QuantConnect.Tests.Common.Securities
             option.Underlying = securities[Symbols.SPY];
             option.ExerciseSettlement = SettlementType.Cash;
 
-            var fills = option.OptionExerciseModel.OptionExercise(option, order);
+            var fills = option.OptionExerciseModel.OptionExercise(option, order).ToList();
+
+            Assert.AreEqual(1, fills.Count);
+            Assert.IsFalse(fills[0].IsAssignment);
+            Assert.AreEqual("Automatic Exercise", fills[0].Message);
 
             foreach (var fill in fills)
             {
@@ -2092,7 +2159,7 @@ namespace QuantConnect.Tests.Common.Securities
             var portfolio = new SecurityPortfolioManager(securities, transactions);
 
             algorithm.Securities = securities;
-            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), new TestResultHandler(Console.WriteLine));
+            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), _resultHandler);
             transactions.SetOrderProcessor(transactionHandler);
 
             // (underlying price - strike price) times number of shares
@@ -2130,7 +2197,11 @@ namespace QuantConnect.Tests.Common.Securities
             option.Underlying = securities[Symbols.SPY];
             option.ExerciseSettlement = SettlementType.Cash;
 
-            var fills = option.OptionExerciseModel.OptionExercise(option, order);
+            var fills = option.OptionExerciseModel.OptionExercise(option, order).ToList();
+
+            Assert.AreEqual(1, fills.Count);
+            Assert.IsTrue(fills[0].IsAssignment);
+            Assert.AreEqual("Automatic Assignment", fills[0].Message);
 
             // we are simulating assignment by calling a method for this
             var portfolioModel = (OptionPortfolioModel)option.PortfolioModel;
@@ -2158,7 +2229,7 @@ namespace QuantConnect.Tests.Common.Securities
             var portfolio = new SecurityPortfolioManager(securities, transactions);
 
             algorithm.Securities = securities;
-            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), new TestResultHandler(Console.WriteLine));
+            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), _resultHandler);
             transactions.SetOrderProcessor(transactionHandler);
 
             portfolio.SetCash(0);
@@ -2195,7 +2266,11 @@ namespace QuantConnect.Tests.Common.Securities
             option.Underlying = securities[Symbols.SPY];
             option.ExerciseSettlement = SettlementType.Cash;
 
-            var fills = option.OptionExerciseModel.OptionExercise(option, order);
+            var fills = option.OptionExerciseModel.OptionExercise(option, order).ToList();
+
+            Assert.AreEqual(1, fills.Count);
+            Assert.IsFalse(fills[0].IsAssignment);
+            Assert.AreEqual("OTM", fills[0].Message);
 
             // we are simulating assignment by calling a method for this
             var portfolioModel = (OptionPortfolioModel)option.PortfolioModel;
@@ -2224,7 +2299,7 @@ namespace QuantConnect.Tests.Common.Securities
             var portfolio = new SecurityPortfolioManager(securities, transactions);
 
             algorithm.Securities = securities;
-            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), new TestResultHandler(Console.WriteLine));
+            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), _resultHandler);
             transactions.SetOrderProcessor(transactionHandler);
 
             // (strike price - underlying price) times number of shares
@@ -2262,7 +2337,11 @@ namespace QuantConnect.Tests.Common.Securities
             option.Underlying = securities[Symbols.SPY];
             option.ExerciseSettlement = SettlementType.Cash;
 
-            var fills = option.OptionExerciseModel.OptionExercise(option, order);
+            var fills = option.OptionExerciseModel.OptionExercise(option, order).ToList();
+
+            Assert.AreEqual(1, fills.Count);
+            Assert.IsTrue(fills[0].IsAssignment);
+            Assert.AreEqual("Automatic Assignment", fills[0].Message);
 
             // we are simulating assignment by calling a method for this
             var portfolioModel = (OptionPortfolioModel)option.PortfolioModel;
@@ -2291,7 +2370,7 @@ namespace QuantConnect.Tests.Common.Securities
             var portfolio = new SecurityPortfolioManager(securities, transactions);
 
             algorithm.Securities = securities;
-            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), new TestResultHandler(Console.WriteLine));
+            transactionHandler.Initialize(algorithm, new BacktestingBrokerage(algorithm), _resultHandler);
             transactions.SetOrderProcessor(transactionHandler);
 
             // (strike price - underlying price) times number of shares
@@ -2329,7 +2408,11 @@ namespace QuantConnect.Tests.Common.Securities
             option.Underlying = securities[Symbols.SPY];
             option.ExerciseSettlement = SettlementType.Cash;
 
-            var fills = option.OptionExerciseModel.OptionExercise(option, order);
+            var fills = option.OptionExerciseModel.OptionExercise(option, order).ToList();
+
+            Assert.AreEqual(1, fills.Count);
+            Assert.IsTrue(fills[0].IsAssignment);
+            Assert.AreEqual("Automatic Assignment", fills[0].Message);
 
             // we are simulating assignment by calling a method for this
             var portfolioModel = (OptionPortfolioModel)option.PortfolioModel;

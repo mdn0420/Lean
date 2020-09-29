@@ -22,8 +22,8 @@ using System.Linq;
 using System.Threading;
 using Newtonsoft.Json;
 using QuantConnect.Configuration;
+using QuantConnect.Data.UniverseSelection;
 using QuantConnect.Interfaces;
-using QuantConnect.Lean.Engine.DataFeeds;
 using QuantConnect.Lean.Engine.TransactionHandlers;
 using QuantConnect.Logging;
 using QuantConnect.Orders;
@@ -38,6 +38,16 @@ namespace QuantConnect.Lean.Engine.Results
     /// </summary>
     public abstract class BaseResultsHandler
     {
+        /// <summary>
+        /// The main loop update interval
+        /// </summary>
+        protected TimeSpan MainUpdateInterval = TimeSpan.FromSeconds(3);
+
+        /// <summary>
+        /// The chart update interval
+        /// </summary>
+        protected TimeSpan ChartUpdateInterval = TimeSpan.FromMinutes(1);
+
         /// <summary>
         /// The last position consumed from the <see cref="ITransactionHandler.OrderEvents"/> by <see cref="GetDeltaOrders"/>
         /// </summary>
@@ -142,11 +152,6 @@ namespace QuantConnect.Lean.Engine.Results
         protected IAlgorithm Algorithm { get; set; }
 
         /// <summary>
-        /// The data manager, used to access current subscriptions
-        /// </summary>
-        protected IDataFeedSubscriptionManager DataManager;
-
-        /// <summary>
         /// Gets or sets the current alpha runtime statistics
         /// </summary>
         protected AlphaRuntimeStatistics AlphaRuntimeStatistics { get; set; }
@@ -231,7 +236,9 @@ namespace QuantConnect.Lean.Engine.Results
                 return;
             }
 
-            var path = $"{AlgorithmId}-order-events.json";
+            var filename = $"{AlgorithmId}-order-events.json";
+            var path = GetResultsPath(filename);
+
             var data = JsonConvert.SerializeObject(orderEvents, Formatting.None, OrderEventJsonConverter);
 
             File.WriteAllText(path, data);
@@ -309,7 +316,23 @@ namespace QuantConnect.Lean.Engine.Results
         {
             return Path.Combine(ResultsDestinationFolder, filename);
         }
-        
+
+        /// <summary>
+        /// Event fired each time that we add/remove securities from the data feed
+        /// </summary>
+        public virtual void OnSecuritiesChanged(SecurityChanges changes)
+        {
+        }
+
+        /// <summary>
+        /// True if this result handler should sample charts
+        /// </summary>
+        /// <remarks>This is used to disable live trading charting on extended market hours unless user is consuming data</remarks>
+        protected virtual bool ShouldSampleCharts(DateTime utcDateTime)
+        {
+            return true;
+        }
+
         /// <summary>
         /// Returns the location of the logs
         /// </summary>
@@ -342,14 +365,6 @@ namespace QuantConnect.Lean.Engine.Results
         public virtual void SetAlphaRuntimeStatistics(AlphaRuntimeStatistics statistics)
         {
             AlphaRuntimeStatistics = statistics;
-        }
-
-        /// <summary>
-        /// Sets the current Data Manager instance
-        /// </summary>
-        public virtual void SetDataManager(IDataFeedSubscriptionManager dataManager)
-        {
-            DataManager = dataManager;
         }
 
         /// <summary>
@@ -389,13 +404,13 @@ namespace QuantConnect.Lean.Engine.Results
         /// <summary>
         /// Samples portfolio equity, benchmark, and daily performance
         /// </summary>
-        /// <param name="time">Current time in the AlgorithmManager loop</param>
+        /// <param name="time">Current UTC time in the AlgorithmManager loop</param>
         /// <param name="force">Force sampling of equity, benchmark, and performance to be </param>
         public virtual void Sample(DateTime time, bool force = false)
         {
             var dayChanged = PreviousUtcSampleTime.Date != time.Date;
 
-            if (dayChanged || force)
+            if (ShouldSampleCharts(time) && dayChanged || force)
             {
                 if (force)
                 {
@@ -418,6 +433,7 @@ namespace QuantConnect.Lean.Engine.Results
                 }
             }
 
+            // this time goes into the sample, we keep him updated because sample is called before we update anything, so the sampled values are from the last call
             PreviousUtcSampleTime = time;
         }
 
