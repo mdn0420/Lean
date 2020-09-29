@@ -2,16 +2,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using LucrumLabs.Data;
-using Newtonsoft.Json;
 using QuantConnect;
 using QuantConnect.Algorithm;
 using QuantConnect.Brokerages;
-using QuantConnect.Configuration;
 using QuantConnect.Data;
-using QuantConnect.Data.Consolidators;
 using QuantConnect.Data.Market;
 using QuantConnect.Indicators;
 using QuantConnect.Orders;
@@ -19,71 +15,32 @@ using QuantConnect.Securities.Forex;
 
 namespace LucrumLabs.Algorithm
 {
-    public class ParallaxAlgorithm : QCAlgorithm
+    public class BBRevertAlgorithm : QCAlgorithm
     {
-        public static readonly decimal[] FibRetraceLevels = new[] {0.236m, 0.382m, 0.5m, 0.618m, 0.786m, 1m};
-        public static readonly decimal[] FibExtensionLevels = new[] {0m, -0.382m, -0.618m, -1m, -1.618m};
-        /// <summary>
-        /// Body of indecision bar should be less than this
-        /// </summary>
-        private const decimal IndecisionBodyRatioMax = 0.6m;
+        private const decimal SetupRangeMinAtrRatio = 1m;
 
-        /// <summary>
-        /// Minimum size of wick of indecision bar in the opposite direction
-        /// </summary>
-        private const decimal IndecisionWickRatioMin = 0.05m;
-
-        /// <summary>
-        /// Minimum distance from the edge of the bank for the indecision bar body
-        /// </summary>
-        private const decimal IndecisionMinBBDistance = 0.95m;
-
-        /// <summary>
-        /// Minimum ratio of body of setup candle
-        /// </summary>
-        private const decimal SetupBodyRatioMin = 0.2m;
-
-        /// <summary>
-        /// Maximum size of wick for setup bar in the trade direction, 1.0 disables this check
-        /// </summary>
-        private const decimal SetupWickRatioMax = 1m;
-
-        /// <summary>
-        /// Maximum normalized distance of setup bar to mid BB, 1.0 disables this check
-        /// </summary>
-        private const decimal SetupCloseMidBBMax = 1m;
-    
-        /// <summary>
-        /// How large the setup bar needs to be relative to the ATR, 0 disables this
-        /// </summary>
-        private const decimal SetupBarLengthATRScale = 0m;
-
-        /// <summary>
-        /// Index to the Fib retracement array.
-        /// </summary>
-        private const int MaxSetupFibRetracement = 1;
-
-        protected TimeSpan TradingTimeFrame = TimeSpan.FromHours(24);
+        private const decimal SetupWickRatioMax = 0.25m;
+        
+        protected TimeSpan TradingTimeFrame = TimeSpan.FromHours(4);
 
         protected readonly string[] PAIRS = ForexPairs.MAJORS_28;
-        //protected readonly string[] PAIRS = new[] {"AUDCAD", "AUDCHF", "AUDJPY", "AUDNZD", "AUDUSD", "CADCHF"};
-
+        
         protected Dictionary<Symbol, RollingWindow<QuoteBar>> _setupWindow = new Dictionary<Symbol, RollingWindow<QuoteBar>>();
         protected Dictionary<Symbol, RollingWindow<IndicatorDataPoint>> _bbUpperWindow = new Dictionary<Symbol, RollingWindow<IndicatorDataPoint>>();
         protected Dictionary<Symbol, RollingWindow<IndicatorDataPoint>> _bbLowerWindow = new Dictionary<Symbol, RollingWindow<IndicatorDataPoint>>();
         protected Dictionary<Symbol, RollingWindow<IndicatorDataPoint>> _bbMidWindow = new Dictionary<Symbol, RollingWindow<IndicatorDataPoint>>();
-
+        
         protected Dictionary<Symbol, ParallaxTradeSetup> _activeTrades = new Dictionary<Symbol, ParallaxTradeSetup>();
         protected List<Symbol> _activeSymbols = new List<Symbol>();
-
-        protected AlgorithmResults _results = new AlgorithmResults();
         
         protected Dictionary<Symbol, Stochastic> _stochastics = new Dictionary<Symbol, Stochastic>();
         protected Dictionary<Symbol, BollingerBands> _bollingerBands = new Dictionary<Symbol, BollingerBands>();
         protected Dictionary<Symbol, AverageTrueRange> _atrs = new Dictionary<Symbol, AverageTrueRange>();
-
+        
+        protected AlgorithmResults _results = new AlgorithmResults();
+        
         protected ParallaxTradeSettings _tradeSettings;
-
+        
         public override void Initialize()
         {
             SetupDates();
@@ -99,19 +56,19 @@ namespace LucrumLabs.Algorithm
 
             _tradeSettings = GetTradeSettings();
         }
-
-        protected virtual void SetupDates()
-        {
-            SetStartDate(2016, 1, 1);
-            SetEndDate(2019, 12, 31);
-        }
-
+        
         protected virtual ParallaxTradeSettings GetTradeSettings()
         {
-            var result = new ParallaxTradeSettings();
+            var result = new ParallaxTradeSettings()
+            {
+                ScaleIn = false,
+                Entry1Fib = 0.33m,
+                Sl1Fib = 1m,
+                Tp1Fib = -1m
+            };
             return result;
         }
-
+        
         private void SetupPair(string ticker)
         {
             var consolidator = new SmoothQuoteBarConsolidator(AlgoUtils.NewYorkClosePeriod(TimeZone, TradingTimeFrame));
@@ -136,10 +93,16 @@ namespace LucrumLabs.Algorithm
             // This needs to get added last so the bar gets processed after indicators are updated
             consolidator.DataConsolidated += OnDataConsolidated;
         }
-
+        
+        protected virtual void SetupDates()
+        {
+            SetStartDate(2019, 1, 1);
+            SetEndDate(2019, 12, 31);
+        }
+        
         private void OnDataConsolidated(object sender, QuoteBar bar)
         {
-            #if DEBUG_PRINT_BARS   
+#if DEBUG_PRINT_BARS   
             string debugStr = string.Format(
                 "Consolidated: {0} - O:{1:F5} H:{2:F5} L:{3:F5} C:{4:F5} ",
                 bar.Time.ToString(),
@@ -150,7 +113,7 @@ namespace LucrumLabs.Algorithm
             );
             //debugStr += string.Format("BBMid:{0:F5} Up: {1:F5} Low: {2:F5}", _bb.MiddleBand, _bb.UpperBand, _bb.LowerBand);
             Console.WriteLine(debugStr);
-            #endif
+#endif
 
             var symbol = bar.Symbol;
             var bb = _bollingerBands[symbol];
@@ -186,75 +149,67 @@ namespace LucrumLabs.Algorithm
             {
                 return;
             }
-
+            
             var prevBar = window[1];
             var thisBar = window[0];
 
-            int ibar = IsIndecisionBar(prevBar, 
-                _bbUpperWindow[symbol][1].Value, 
-                _bbLowerWindow[symbol][1].Value, 
-                _bbMidWindow[symbol][1].Value);
-
-            /*
-            if (ibar != 0)
-            {
-                Console.WriteLine("Ibar found {0}", prevBar.EndTime);
-            }*/
-
-            var ibarBodyLength = prevBar.GetBodyTop() - prevBar.GetBodyBottom();
-            var setupBodyLength = thisBar.GetBodyTop() - thisBar.GetBodyBottom();
-
-            if (setupBodyLength < _atrs[symbol] * SetupBarLengthATRScale)
+            // Check bar size relative to ATR
+            var range = AverageTrueRange.ComputeTrueRange(prevBar, thisBar);
+            var atr = _atrs[symbol];
+            if (range < atr * SetupRangeMinAtrRatio)
             {
                 return;
             }
+            
+            // todo: check wick ratio
 
-            var setupRatios = thisBar.GetBarRatios();
-            if (ibar != 0 && setupRatios.Body > SetupBodyRatioMin && setupBodyLength > ibarBodyLength)
+            var bbUpper = _bbUpperWindow[symbol][0].Value;
+            var bbLower = _bbLowerWindow[symbol][0].Value;
+            var stochK = _stochastics[symbol].StochK.Current.Value;
+            var stochD = _stochastics[symbol].StochD.Current.Value;
+
+            const decimal stochOverbought = 80m;
+            const decimal stochOversold = 20m;
+
+            var barRatios = thisBar.GetBarRatios();
+
+            bool isLongSetup = thisBar.Open < bbLower && thisBar.Close > bbLower &&
+                               stochK <= stochOversold && stochD <= stochOversold &&
+                               barRatios.Top < SetupWickRatioMax && 
+                               thisBar.High > prevBar.High;
+            bool isShortSetup = thisBar.Open > bbUpper && thisBar.Close < bbUpper &&
+                                stochK >= stochOverbought && stochD >= stochOverbought && 
+                                barRatios.Bottom < SetupWickRatioMax && 
+                                thisBar.Low < prevBar.Low;
+
+            if (isLongSetup)
             {
-                var stochK = _stochastics[symbol].StochK.Current.Value;
-                var stochD = _stochastics[symbol].StochD.Current.Value;
-
-                var maxSetupRetrace = FibRetraceLevels[MaxSetupFibRetracement];
-                // long setup
-                if (ibar == 1 && 
-                    thisBar.Close > prevBar.Close &&  // higher close
-                    thisBar.High > prevBar.High && // higher high
-                    stochK <= 25 && // Stoch showing oversold
-                    stochD <= 25 &&
-                    // Didn't retrace too far on close
-                    thisBar.Close > MathUtils.GetFibPrice(thisBar.Low, thisBar.High, maxSetupRetrace) &&
-                    setupRatios.Top < SetupWickRatioMax) // Small wick in direction of trade
-                {
-                    Console.WriteLine(
-                        "{0} {1} LONG setup: H/L: {2}/{3}",
-                        thisBar.Time,
-                        symbol,
-                        thisBar.High,
-                        thisBar.Low
-                    );
-                    TryOpenTrade(prevBar, thisBar,OrderDirection.Buy);
-                }
-                else if (ibar == -1 && 
-                         thisBar.Close < prevBar.Close &&
-                         thisBar.Low < prevBar.Low &&
-                         stochK >= 75 &&
-                         stochD >= 75 &&
-                         thisBar.Close < MathUtils.GetFibPrice(thisBar.High, thisBar.Low, maxSetupRetrace) &&
-                         setupRatios.Bottom < SetupWickRatioMax)
-                {
-                    Console.WriteLine(
-                        "{0} {1} SHORT setup: H/L: {2}/{3}",
-                        thisBar.Time,
-                        symbol,
-                        thisBar.High,
-                        thisBar.Low
-                    );
-                    TryOpenTrade(prevBar, thisBar, OrderDirection.Sell);
-                }
+                Console.WriteLine("{0} {1} - Found long setup, Range: {2}, ATR: {3}", thisBar.Time, symbol, range, atr);
+                PrintBarInfo(thisBar);
+                TryOpenTrade(prevBar, thisBar, OrderDirection.Buy);
+            } 
+            else if (isShortSetup)
+            {
+                Console.WriteLine("{0} {1} - Found short setup Range: {2}, ATR: {3}", thisBar.Time, symbol, range, atr);
+                PrintBarInfo(thisBar);
+                TryOpenTrade(prevBar, thisBar, OrderDirection.Sell);
             }
         }
 
+        private void PrintBarInfo(QuoteBar bar)
+        {
+            string debugStr = string.Format(
+                "Bar info: {0} - O:{1:F5} H:{2:F5} L:{3:F5} C:{4:F5} ",
+                bar.Time.ToString(),
+                bar.Open,
+                bar.High,
+                bar.Low,
+                bar.Close
+            );
+            //debugStr += string.Format("BBMid:{0:F5} Up: {1:F5} Low: {2:F5}", _bb.MiddleBand, _bb.UpperBand, _bb.LowerBand);
+            Console.WriteLine(debugStr);
+        }
+        
         protected void TryOpenTrade(QuoteBar ibar, QuoteBar setupBar, OrderDirection direction)
         {
             bool canTrade = true;
@@ -292,7 +247,7 @@ namespace LucrumLabs.Algorithm
                 trade.PlaceOrders();
             }
         }
-
+        
         private void CleanupTrades()
         {
             List<Symbol> remove = new List<Symbol>();
@@ -313,31 +268,7 @@ namespace LucrumLabs.Algorithm
                 _activeSymbols.Remove(symbol);
             }
         }
-
-        private int IsIndecisionBar(QuoteBar bar, decimal bbUpper, decimal bbLower, decimal bbMid)
-        {
-            int result = 0;
-            var ratios = bar.GetBarRatios();
-
-            if (ratios.Body < IndecisionBodyRatioMax)
-            {
-                var bbTopLerp = MathUtils.InvLerp(bbMid, bbUpper, bar.High);
-                var bbBottomLerp = MathUtils.InvLerp(bbMid, bbLower, bar.Low);
-
-                // Long indecision bar
-                if (ratios.Bottom > IndecisionWickRatioMin && bbBottomLerp >= IndecisionMinBBDistance)
-                {
-                    result = 1;
-                } 
-                else if (ratios.Top > IndecisionWickRatioMin && bbTopLerp >= IndecisionMinBBDistance)
-                {
-                    result = -1;
-                }
-            }
-            
-            return result;
-        }
-
+        
         public override void OnData(Slice slice)
         {
             /*
@@ -368,7 +299,7 @@ namespace LucrumLabs.Algorithm
 
             CleanupTrades();
         }
-
+        
         public override void OnOrderEvent(OrderEvent orderEvent)
         {
             var trades = _activeTrades.Values.ToList();
@@ -387,14 +318,7 @@ namespace LucrumLabs.Algorithm
             
             CleanupTrades();
         }
-
-        public override void OnEndOfAlgorithm()
-        {
-            string resultsFolder = Config.Get("results-destination-folder", Directory.GetCurrentDirectory());;
-            var filePath = Path.Combine(resultsFolder, $"{AlgorithmId}-analysis_data.json");
-            File.WriteAllText(filePath, JsonConvert.SerializeObject(_results, Formatting.Indented));
-        }
-
+        
         public void PrintBalance()
         {
             var portfolio = Portfolio;

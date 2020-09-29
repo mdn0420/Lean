@@ -5,6 +5,7 @@ using System.Security.Policy;
 using LucrumLabs.Trades;
 using NodaTime;
 using QuantConnect;
+using QuantConnect.Algorithm;
 using QuantConnect.Data.Market;
 using QuantConnect.Orders;
 using QuantConnect.Securities;
@@ -44,7 +45,7 @@ namespace LucrumLabs.Algorithm
         // True if price hit extension before entering
         private bool _expired;
 
-        public ParallaxTrade(ParallaxAlgorithm algorithm, 
+        public ParallaxTrade(QCAlgorithm algorithm, 
             QuoteBar setupBar, 
             OrderDirection direction, 
             decimal entryFib, 

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using QuantConnect;
+using QuantConnect.Algorithm;
 using QuantConnect.Data.Market;
 using QuantConnect.Orders;
 
@@ -27,7 +28,7 @@ namespace LucrumLabs.Algorithm
     /// </summary>
     public class ParallaxTradeSetup
     {
-        private ParallaxAlgorithm _algorithm;
+        private QCAlgorithm _algorithm;
         private QuoteBar _ibar;
         private QuoteBar _setupBar;
         private OrderDirection _direction;
@@ -66,7 +67,7 @@ namespace LucrumLabs.Algorithm
         }
         private ParallaxTrade.TradeState _state = ParallaxTrade.TradeState.PENDING;
         
-        public ParallaxTradeSetup(ParallaxAlgorithm algorithm, QuoteBar ibar, QuoteBar setupBar, OrderDirection direction, ParallaxTradeSettings settings)
+        public ParallaxTradeSetup(QCAlgorithm algorithm, QuoteBar ibar, QuoteBar setupBar, OrderDirection direction, ParallaxTradeSettings settings)
         {
             _algorithm = algorithm;
             _ibar = ibar;

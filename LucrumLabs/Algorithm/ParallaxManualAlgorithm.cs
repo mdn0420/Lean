@@ -26,7 +26,7 @@ namespace LucrumLabs.Algorithm
     }
     public class ParallaxManualAlgorithm : ParallaxAlgorithm
     {
-        private const string TradesFile = "/Users/mnguyen/gitrepos/Lean/Data/trades/vanguer_trades2.csv";
+        private const string TradesFile = "/Users/mnguyen/gitrepos/Lean/Data/trades/minh_trades2.csv";
 
         private Dictionary<Symbol, List<ManualTradeData>> _manualTrades;
         
@@ -41,18 +41,19 @@ namespace LucrumLabs.Algorithm
 
         protected override void SetupDates()
         {
-            SetStartDate(2016, 12, 1);
-            SetEndDate(2019, 12, 31);
+            SetStartDate(2015, 12, 1);
+            SetEndDate(2017, 12, 31);
         }
 
         protected override ParallaxTradeSettings GetTradeSettings()
         {
             var result = new ParallaxTradeSettings()
             {
-                ScaleIn = true,
+                ScaleIn = false,
                 ActiveTradeManagement = false,
                 Tp1Fib = -1m,
-                Tp2Fib = -1m
+                Sl1Fib = 1m,
+                Tp2Fib = -0.618m
             };
             return result;
         }
@@ -98,7 +99,7 @@ namespace LucrumLabs.Algorithm
                     {
                         Time = dt,
                         Symbol = symbol,
-                        Direction = values[2] == "Long" ? OrderDirection.Buy : OrderDirection.Sell
+                        Direction = values[2] == "Buy" || values[2] == "Long" ? OrderDirection.Buy : OrderDirection.Sell
                     };
                     List<ManualTradeData> tradeList = null;
                     if(!results.TryGetValue(symbol, out tradeList))
@@ -118,11 +119,6 @@ namespace LucrumLabs.Algorithm
         public override void OnEndOfAlgorithm()
         {
             base.OnEndOfAlgorithm();
-
-            if (_manualTrades.Count > 0)
-            {
-                Error(string.Format("{0} unprocessed trades", _manualTrades.Count));
-            }
 
             foreach (var kvp in _manualTrades)
             {

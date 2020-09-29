@@ -5,7 +5,7 @@ import datetime
 import pytz
 
 format_results = []
-with open('/Users/mnguyen/gitrepos/Lean/Data/trades/vanguer_trades.csv') as csv_file:
+with open('/Users/mnguyen/gitrepos/Lean/Data/trades/minh_trades.csv') as csv_file:
     csv_reader = csv.reader(csv_file, delimiter=',')
     line_count = 0
     timezone = pytz.timezone('America/New_York')
@@ -13,7 +13,7 @@ with open('/Users/mnguyen/gitrepos/Lean/Data/trades/vanguer_trades.csv') as csv_
     last_symbol = ''
     for row in csv_reader:
         date_str = row[0]
-        date_obj = datetime.datetime.strptime(date_str, '%d/%m/%Y')
+        date_obj = datetime.datetime.strptime(date_str, '%m/%d/%Y')
         date_obj = timezone.localize(date_obj)
         date_obj = date_obj.replace(hour=17)
         symbol = row[1]
@@ -32,7 +32,7 @@ with open('/Users/mnguyen/gitrepos/Lean/Data/trades/vanguer_trades.csv') as csv_
         print(f'{date_obj} {symbol}')
     print(f'Processed {line_count} lines. {len(format_results)} results.')
     
-with open('/Users/mnguyen/gitrepos/Lean/Data/trades/vanguer_trades2.csv', mode='w') as output_file:
+with open('/Users/mnguyen/gitrepos/Lean/Data/trades/minh_trades2.csv', mode='w') as output_file:
     output_writer = csv.writer(output_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
     for row in format_results:
         output_writer.writerow(row)
