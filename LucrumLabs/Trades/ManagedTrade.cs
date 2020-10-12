@@ -80,7 +80,7 @@ namespace LucrumLabs.Trades
                 return;
             }
 
-            //Console.WriteLine("{0} Setup order for {1} {2}, entry:{3}, sl:{4}, tp:{5}", _bar2.Time, _units, _symbol, _entryPrice, _slPrice, _tpPrice);
+            Console.WriteLine("{0} Setup order for {1} {2}, entry:{3}, sl:{4}, tp:{5}", _algorithm.Time, _quantity, _symbol, _entryPrice, _slPrice, _tpPrice);
             
 
             switch (_entryOrderType)
@@ -90,6 +90,10 @@ namespace LucrumLabs.Trades
                     break;
                 case OrderType.StopMarket:
                     _entryOrder = _algorithm.StopMarketOrder(_symbol, _quantity, _entryPrice);
+                    break;
+                case OrderType.Market:
+                    _entryOrder = _algorithm.MarketOrder(_symbol, _quantity, true);
+                    OnTradeEntered();
                     break;
                 default:
                     _algorithm.Error(string.Format("Unsupported entry order type {0}", _entryOrderType));
@@ -151,19 +155,24 @@ namespace LucrumLabs.Trades
 
             return false;
         }
+
+        private void OnTradeEntered()
+        {
+            _entryTimeUtc = _entryOrder.Time;
+            // Setup TP/SL orders
+            Console.WriteLine("{0} - Entered {1} trade for {2:N0} {3} @ {4}", _algorithm.Time, _direction, _entryOrder.QuantityFilled, TradeName, _entryOrder.AverageFillPrice);
+            _state = TradeState.OPEN;
+            //_algorithm.PrintBalance();
+            PlaceManagementOrders();
+        }
         
         public void OnOrderEvent(OrderEvent orderEvent)
         {
             if (_entryOrder != null && _entryOrder.OrderId == orderEvent.OrderId)
             {
-                if (orderEvent.Status == OrderStatus.Filled)
+                if (_state == TradeState.PENDING && orderEvent.Status == OrderStatus.Filled)
                 {
-                    _entryTimeUtc = orderEvent.UtcTime;
-                    // Setup TP/SL orders
-                    Console.WriteLine("{0} - Entered {1} trade for {2:N0} {3} @ {4}", _algorithm.Time, _direction, orderEvent.Quantity, TradeName, orderEvent.FillPrice);
-                    _state = TradeState.OPEN;
-                    //_algorithm.PrintBalance();
-                    PlaceManagementOrders();
+                    OnTradeEntered();
                 } 
                 else if (orderEvent.Status == OrderStatus.Canceled)
                 {
@@ -182,10 +191,11 @@ namespace LucrumLabs.Trades
                 {
                     UpdateProfitLoss();
                     Console.WriteLine(
-                        "{0} - Stop loss hit for {1} at {2}",
+                        "{0} - Stop loss hit for {1} at {2}, Qty: {3}",
                         _algorithm.Time,
                         TradeName,
-                        orderEvent.FillPrice
+                        orderEvent.FillPrice,
+                        orderEvent.FillQuantity
                     );
                     Close();
                 }
@@ -196,10 +206,11 @@ namespace LucrumLabs.Trades
                 {
                     UpdateProfitLoss();
                     Console.WriteLine(
-                            "{0} - Take profit hit for {1} at {2}",
+                            "{0} - Take profit hit for {1} at {2}, Qty: {3}",
                             _algorithm.Time,
                             TradeName,
-                            orderEvent.FillPrice
+                            orderEvent.FillPrice,
+                            orderEvent.FillQuantity
                     );
                     Close();
                 }

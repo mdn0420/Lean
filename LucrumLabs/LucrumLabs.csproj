@@ -49,6 +49,7 @@
   <ItemGroup>
     <Compile Include="Algorithm\AlgorithmResults.cs" />
     <Compile Include="Algorithm\BBRevertAlgorithm.cs" />
+    <Compile Include="Algorithm\FrameworkTestAlgorithm.cs" />
     <Compile Include="Algorithm\InsideBarAlgorithm.cs" />
     <Compile Include="Algorithm\InsideBarTrade.cs" />
     <Compile Include="Algorithm\ParallaxManualAlgorithm.cs" />
@@ -57,15 +58,23 @@
     <Compile Include="Algorithm\EmaForexAlgorithm.cs" />
     <Compile Include="Algorithm\ParallaxTrade.cs" />
     <Compile Include="Algorithm\ParallaxAlgorithm.cs" />
+    <Compile Include="Algorithm\StdDevRevertAlgorithm.cs" />
     <Compile Include="Algorithm\TradeSetupData.cs" />
     <Compile Include="AlgoUtils.cs" />
+    <Compile Include="Alpha\StdDevAlphaModel.cs" />
     <Compile Include="BarUtils.cs" />
     <Compile Include="Data\SmoothQuoteBarConsolidator.cs" />
     <Compile Include="ForexPairs.cs" />
     <Compile Include="ForexUtils.cs" />
     <Compile Include="MathUtils.cs" />
+    <Compile Include="Portfolio\IPortfolioTargetPrice.cs" />
+    <Compile Include="Portfolio\PortfolioTargetPrice.cs" />
+    <Compile Include="Portfolio\TestPortfolioModel.cs" />
+    <Compile Include="Risk\AtrRiskManagementModel.cs" />
+    <Compile Include="Risk\TestRiskModel.cs" />
     <Compile Include="TestAlgorithm.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Trades\CalculatedTrade.cs" />
     <Compile Include="Trades\FibLevelsTrade.cs" />
     <Compile Include="Trades\ManagedTrade.cs" />
   </ItemGroup>

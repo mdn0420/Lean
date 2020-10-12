@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-full_path=$(realpath $0)
+full_path=/Users/mnguyen/gitrepos/Lean/.
 current_dir=$(dirname $full_path)
 default_image=quantconnect/research:latest
 parent=$(dirname $current_dir)
@@ -61,8 +61,8 @@ fi
 
 echo "Starting docker container; container id is:"
 sudo docker run -d --rm -p 8888:8888 \
-    --mount type=bind,source=$data_dir,target=/Data,readonly \
-    --mount type=bind,source=$notebook_dir,target=/Lean/Launcher/bin/Debug/Notebooks \
+    --mount type=bind,source="$data_dir",target=/Data,readonly \
+    --mount type=bind,source="$notebook_dir",target=/Lean/Launcher/bin/Debug/Notebooks \
     $image
 
 echo "Docker container started; will wait 2 seconds before opening web browser."

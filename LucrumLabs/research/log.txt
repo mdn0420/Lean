@@ -1,0 +1,201 @@
+2020-09-29T17:07:59.4407310Z TRACE:: QuantBook started; Is Python: True
+2020-09-29T17:07:59.4440440Z TRACE:: Config.Get(): Configuration key not found. Key: map-file-provider - Using default value: LocalDiskMapFileProvider
+2020-09-29T17:07:59.7941020Z TRACE:: Config.Get(): Configuration key not found. Key: data-directory - Using default value: ../../../Data/
+2020-09-29T17:07:59.7953300Z TRACE:: Config.Get(): Configuration key not found. Key: version-id - Using default value: 
+2020-09-29T17:07:59.7959100Z TRACE:: Config.Get(): Configuration key not found. Key: cache-location - Using default value: /home/Data/
+2020-09-29T17:41:48.4771460Z TRACE:: QuantBook started; Is Python: True
+2020-09-29T17:41:48.4801300Z TRACE:: Config.Get(): Configuration key not found. Key: map-file-provider - Using default value: LocalDiskMapFileProvider
+2020-09-29T17:41:48.8050650Z TRACE:: Config.Get(): Configuration key not found. Key: data-directory - Using default value: ../../../Data/
+2020-09-29T17:41:48.8065950Z TRACE:: Config.Get(): Configuration key not found. Key: version-id - Using default value: 
+2020-09-29T17:41:48.8077070Z TRACE:: Config.Get(): Configuration key not found. Key: cache-location - Using default value: /Data/
+2020-09-29T17:41:49.7972170Z TRACE:: Config.Get(): Configuration key not found. Key: setup-handler - Using default value: ConsoleSetupHandler
+2020-09-29T17:41:49.7981710Z TRACE:: Config.Get(): Configuration key not found. Key: transaction-handler - Using default value: BacktestingTransactionHandler
+2020-09-29T17:41:49.7988180Z TRACE:: Config.Get(): Configuration key not found. Key: real-time-handler - Using default value: BacktestingRealTimeHandler
+2020-09-29T17:41:49.7998080Z TRACE:: Config.Get(): Configuration key not found. Key: data-feed-handler - Using default value: FileSystemDataFeed
+2020-09-29T17:41:49.8004660Z TRACE:: Config.Get(): Configuration key not found. Key: result-handler - Using default value: BacktestingResultHandler
+2020-09-29T17:41:49.8009980Z TRACE:: Config.Get(): Configuration key not found. Key: map-file-provider - Using default value: LocalDiskMapFileProvider
+2020-09-29T17:41:49.8014310Z TRACE:: Config.Get(): Configuration key not found. Key: factor-file-provider - Using default value: LocalDiskFactorFileProvider
+2020-09-29T17:41:49.8022540Z TRACE:: Config.Get(): Configuration key not found. Key: data-provider - Using default value: DefaultDataProvider
+2020-09-29T17:41:49.8026260Z TRACE:: Config.Get(): Configuration key not found. Key: alpha-handler - Using default value: DefaultAlphaHandler
+2020-09-29T17:41:49.8031880Z TRACE:: Config.Get(): Configuration key not found. Key: object-store - Using default value: LocalObjectStore
+2020-09-29T17:41:49.8035420Z TRACE:: Config.Get(): Configuration key not found. Key: data-permission-manager - Using default value: DataPermissionManager
+2020-09-29T17:41:49.8131050Z TRACE:: Config.Get(): Configuration key not found. Key: results-destination-folder - Using default value: /Lean/Launcher/bin/Debug/Notebooks/research
+2020-09-29T17:41:49.8420280Z TRACE:: Config.Get(): Configuration key not found. Key: map-file-provider - Using default value: LocalDiskMapFileProvider
+2020-09-29T17:41:49.8505240Z TRACE:: Config.Get(): Configuration key not found. Key: object-store-root - Using default value: ./storage
+2020-09-29T17:41:49.8930080Z TRACE:: Config.Get(): Configuration key not found. Key: api-access-token - Using default value: 
+2020-09-29T17:41:49.9479240Z TRACE:: Config.GetValue(): job-user-id - Using default value: 0
+2020-09-29T17:41:49.9490750Z TRACE:: Config.GetValue(): job-project-id - Using default value: 0
+2020-09-29T17:41:49.9726200Z TRACE:: Config.GetValue(): live-mode - Using default value: False
+2020-09-29T17:41:49.9733580Z TRACE:: Config.Get(): Configuration key not found. Key: algorithm-type-name - Using default value: 
+2020-09-29T17:41:50.0339000Z TRACE:: Config.GetValue(): regression-update-statistics - Using default value: False
+2020-09-29T17:41:50.0488360Z TRACE:: Config.Get(): Configuration key not found. Key: lean-manager-type - Using default value: LocalLeanManager
+2020-09-29T17:41:50.0818420Z TRACE:: Config.GetValue(): job-user-id - Using default value: 0
+2020-09-29T17:41:50.0826010Z TRACE:: Config.Get(): Configuration key not found. Key: api-access-token - Using default value: 
+2020-09-29T17:41:50.0856520Z TRACE:: Config.Get(): Configuration key not found. Key: cloud-api-url - Using default value: https://www.quantconnect.com/api/v2/
+2020-09-29T17:41:50.3836590Z TRACE:: Config.GetValue(): scheduled-event-leaky-bucket-capacity - Using default value: 120
+2020-09-29T17:41:50.3857210Z TRACE:: Config.GetValue(): scheduled-event-leaky-bucket-refill-amount - Using default value: 18
+2020-09-29T17:41:50.3869720Z TRACE:: Config.GetValue(): scheduled-event-leaky-bucket-time-interval-minutes - Using default value: 1440
+2020-09-29T17:41:50.3942340Z TRACE:: Config.GetValue(): algorithm-manager-time-loop-maximum - Using default value: 20
+2020-09-29T17:41:50.3973910Z TRACE:: Config.GetValue(): job-user-id - Using default value: 0
+2020-09-29T17:41:50.3979510Z TRACE:: Config.GetValue(): project-id - Using default value: 0
+2020-09-29T17:41:50.4042730Z TRACE:: Config.Get(): Configuration key not found. Key: api-access-token - Using default value: 
+2020-09-29T17:41:50.4050860Z TRACE:: Config.GetValue(): scheduled-event-leaky-bucket-capacity - Using default value: 120
+2020-09-29T17:41:50.4057960Z TRACE:: Config.GetValue(): scheduled-event-leaky-bucket-refill-amount - Using default value: 18
+2020-09-29T17:41:50.4065080Z TRACE:: Config.GetValue(): scheduled-event-leaky-bucket-time-interval-minutes - Using default value: 1440
+2020-09-29T17:41:50.4070730Z TRACE:: Config.GetValue(): storage-limit-mb - Using default value: 5
+2020-09-29T17:41:50.4078670Z TRACE:: Config.GetValue(): storage-file-count - Using default value: 100
+2020-09-29T17:41:50.4085740Z TRACE:: Config.GetValue(): storage-permissions - Using default value: 3
+2020-09-29T17:41:50.4177640Z TRACE:: LocalObjectStore.Initialize(): Storage Root: /Lean/Launcher/bin/Debug/Notebooks/research/storage/QuantBook
+2020-09-29T17:41:50.4600050Z TRACE:: Config.Get(): Configuration key not found. Key: history-provider - Using default value: SubscriptionDataReaderHistoryProvider
+2020-09-29T17:49:37.4784230Z TRACE:: Config.GetValue(): data-feed-workers-count - Using default value: 8
+2020-09-29T17:49:37.4793200Z TRACE:: Config.GetValue(): data-feed-max-work-weight - Using default value: 400
+2020-09-29T17:49:37.4798080Z TRACE:: Config.Get(): Configuration key not found. Key: data-feed-queue-type - Using default value: QuantConnect.Lean.Engine.DataFeeds.WorkScheduling.WorkQueue, QuantConnect.Lean.Engine
+2020-09-29T17:49:37.4805790Z TRACE:: WeightedWorkScheduler(): will use 8 workers and MaxWorkWeight is 400. Queue type: WorkQueue
+2020-09-29T17:49:37.5500160Z TRACE:: Config.GetValue(): show-missing-data-logs - Using default value: False
+2020-09-29T17:53:30.2633470Z TRACE:: QuantBook started; Is Python: True
+2020-09-29T17:53:30.2667690Z TRACE:: Config.Get(): Configuration key not found. Key: map-file-provider - Using default value: LocalDiskMapFileProvider
+2020-09-29T17:53:30.6169450Z TRACE:: Config.Get(): Configuration key not found. Key: data-directory - Using default value: ../../../Data/
+2020-09-29T17:53:30.6183520Z TRACE:: Config.Get(): Configuration key not found. Key: version-id - Using default value: 
+2020-09-29T17:53:30.6191630Z TRACE:: Config.Get(): Configuration key not found. Key: cache-location - Using default value: /Data/
+2020-09-29T17:53:31.5614370Z TRACE:: Config.Get(): Configuration key not found. Key: setup-handler - Using default value: ConsoleSetupHandler
+2020-09-29T17:53:31.5623000Z TRACE:: Config.Get(): Configuration key not found. Key: transaction-handler - Using default value: BacktestingTransactionHandler
+2020-09-29T17:53:31.5630730Z TRACE:: Config.Get(): Configuration key not found. Key: real-time-handler - Using default value: BacktestingRealTimeHandler
+2020-09-29T17:53:31.5635940Z TRACE:: Config.Get(): Configuration key not found. Key: data-feed-handler - Using default value: FileSystemDataFeed
+2020-09-29T17:53:31.5639340Z TRACE:: Config.Get(): Configuration key not found. Key: result-handler - Using default value: BacktestingResultHandler
+2020-09-29T17:53:31.5645210Z TRACE:: Config.Get(): Configuration key not found. Key: map-file-provider - Using default value: LocalDiskMapFileProvider
+2020-09-29T17:53:31.5650600Z TRACE:: Config.Get(): Configuration key not found. Key: factor-file-provider - Using default value: LocalDiskFactorFileProvider
+2020-09-29T17:53:31.5656610Z TRACE:: Config.Get(): Configuration key not found. Key: data-provider - Using default value: DefaultDataProvider
+2020-09-29T17:53:31.5661550Z TRACE:: Config.Get(): Configuration key not found. Key: alpha-handler - Using default value: DefaultAlphaHandler
+2020-09-29T17:53:31.5667070Z TRACE:: Config.Get(): Configuration key not found. Key: object-store - Using default value: LocalObjectStore
+2020-09-29T17:53:31.5672990Z TRACE:: Config.Get(): Configuration key not found. Key: data-permission-manager - Using default value: DataPermissionManager
+2020-09-29T17:53:31.5821940Z TRACE:: Config.Get(): Configuration key not found. Key: results-destination-folder - Using default value: /Lean/Launcher/bin/Debug/Notebooks/research
+2020-09-29T17:53:31.6141150Z TRACE:: Config.Get(): Configuration key not found. Key: map-file-provider - Using default value: LocalDiskMapFileProvider
+2020-09-29T17:53:31.6599920Z TRACE:: Config.Get(): Configuration key not found. Key: object-store-root - Using default value: ./storage
+2020-09-29T17:53:31.8487640Z TRACE:: Config.Get(): Configuration key not found. Key: api-access-token - Using default value: 
+2020-09-29T17:53:31.8541170Z TRACE:: Config.GetValue(): job-user-id - Using default value: 0
+2020-09-29T17:53:31.8550870Z TRACE:: Config.GetValue(): job-project-id - Using default value: 0
+2020-09-29T17:53:31.8647720Z TRACE:: Config.GetValue(): live-mode - Using default value: False
+2020-09-29T17:53:31.8653490Z TRACE:: Config.Get(): Configuration key not found. Key: algorithm-type-name - Using default value: 
+2020-09-29T17:53:31.8780030Z TRACE:: Config.GetValue(): regression-update-statistics - Using default value: False
+2020-09-29T17:53:31.8830090Z TRACE:: Config.Get(): Configuration key not found. Key: lean-manager-type - Using default value: LocalLeanManager
+2020-09-29T17:53:31.8927620Z TRACE:: Config.GetValue(): job-user-id - Using default value: 0
+2020-09-29T17:53:31.8933410Z TRACE:: Config.Get(): Configuration key not found. Key: api-access-token - Using default value: 
+2020-09-29T17:53:31.9116180Z TRACE:: Config.Get(): Configuration key not found. Key: cloud-api-url - Using default value: https://www.quantconnect.com/api/v2/
+2020-09-29T17:53:32.2562240Z TRACE:: Config.GetValue(): scheduled-event-leaky-bucket-capacity - Using default value: 120
+2020-09-29T17:53:32.2580670Z TRACE:: Config.GetValue(): scheduled-event-leaky-bucket-refill-amount - Using default value: 18
+2020-09-29T17:53:32.2597370Z TRACE:: Config.GetValue(): scheduled-event-leaky-bucket-time-interval-minutes - Using default value: 1440
+2020-09-29T17:53:32.2691460Z TRACE:: Config.GetValue(): algorithm-manager-time-loop-maximum - Using default value: 20
+2020-09-29T17:53:32.2740410Z TRACE:: Config.GetValue(): job-user-id - Using default value: 0
+2020-09-29T17:53:32.2748680Z TRACE:: Config.GetValue(): project-id - Using default value: 0
+2020-09-29T17:53:32.2756640Z TRACE:: Config.Get(): Configuration key not found. Key: api-access-token - Using default value: 
+2020-09-29T17:53:32.2761550Z TRACE:: Config.GetValue(): scheduled-event-leaky-bucket-capacity - Using default value: 120
+2020-09-29T17:53:32.2766360Z TRACE:: Config.GetValue(): scheduled-event-leaky-bucket-refill-amount - Using default value: 18
+2020-09-29T17:53:32.2770900Z TRACE:: Config.GetValue(): scheduled-event-leaky-bucket-time-interval-minutes - Using default value: 1440
+2020-09-29T17:53:32.2776180Z TRACE:: Config.GetValue(): storage-limit-mb - Using default value: 5
+2020-09-29T17:53:32.2781290Z TRACE:: Config.GetValue(): storage-file-count - Using default value: 100
+2020-09-29T17:53:32.2786550Z TRACE:: Config.GetValue(): storage-permissions - Using default value: 3
+2020-09-29T17:53:32.2867120Z TRACE:: LocalObjectStore.Initialize(): Storage Root: /Lean/Launcher/bin/Debug/Notebooks/research/storage/QuantBook
+2020-09-29T17:53:32.3136520Z TRACE:: Config.Get(): Configuration key not found. Key: history-provider - Using default value: SubscriptionDataReaderHistoryProvider
+2020-09-29T17:53:34.4483570Z TRACE:: Config.GetValue(): data-feed-workers-count - Using default value: 8
+2020-09-29T17:53:34.4492520Z TRACE:: Config.GetValue(): data-feed-max-work-weight - Using default value: 400
+2020-09-29T17:53:34.4500330Z TRACE:: Config.Get(): Configuration key not found. Key: data-feed-queue-type - Using default value: QuantConnect.Lean.Engine.DataFeeds.WorkScheduling.WorkQueue, QuantConnect.Lean.Engine
+2020-09-29T17:53:34.4517370Z TRACE:: WeightedWorkScheduler(): will use 8 workers and MaxWorkWeight is 400. Queue type: WorkQueue
+2020-09-29T17:53:34.5817530Z TRACE:: Config.GetValue(): show-missing-data-logs - Using default value: False
+2020-09-29T17:56:26.3814700Z TRACE:: QuantBook started; Is Python: True
+2020-09-29T17:56:26.3854070Z TRACE:: Config.Get(): Configuration key not found. Key: map-file-provider - Using default value: LocalDiskMapFileProvider
+2020-09-29T17:56:26.7327530Z TRACE:: Config.Get(): Configuration key not found. Key: data-directory - Using default value: ../../../Data/
+2020-09-29T17:56:26.7341190Z TRACE:: Config.Get(): Configuration key not found. Key: version-id - Using default value: 
+2020-09-29T17:56:26.7347320Z TRACE:: Config.Get(): Configuration key not found. Key: cache-location - Using default value: /Data/
+2020-09-29T17:56:27.7533660Z TRACE:: Config.Get(): Configuration key not found. Key: setup-handler - Using default value: ConsoleSetupHandler
+2020-09-29T17:56:27.7538220Z TRACE:: Config.Get(): Configuration key not found. Key: transaction-handler - Using default value: BacktestingTransactionHandler
+2020-09-29T17:56:27.7543960Z TRACE:: Config.Get(): Configuration key not found. Key: real-time-handler - Using default value: BacktestingRealTimeHandler
+2020-09-29T17:56:27.7549750Z TRACE:: Config.Get(): Configuration key not found. Key: data-feed-handler - Using default value: FileSystemDataFeed
+2020-09-29T17:56:27.7554000Z TRACE:: Config.Get(): Configuration key not found. Key: result-handler - Using default value: BacktestingResultHandler
+2020-09-29T17:56:27.7558690Z TRACE:: Config.Get(): Configuration key not found. Key: map-file-provider - Using default value: LocalDiskMapFileProvider
+2020-09-29T17:56:27.7562050Z TRACE:: Config.Get(): Configuration key not found. Key: factor-file-provider - Using default value: LocalDiskFactorFileProvider
+2020-09-29T17:56:27.7566030Z TRACE:: Config.Get(): Configuration key not found. Key: data-provider - Using default value: DefaultDataProvider
+2020-09-29T17:56:27.7570220Z TRACE:: Config.Get(): Configuration key not found. Key: alpha-handler - Using default value: DefaultAlphaHandler
+2020-09-29T17:56:27.7573560Z TRACE:: Config.Get(): Configuration key not found. Key: object-store - Using default value: LocalObjectStore
+2020-09-29T17:56:27.7580750Z TRACE:: Config.Get(): Configuration key not found. Key: data-permission-manager - Using default value: DataPermissionManager
+2020-09-29T17:56:27.7631580Z TRACE:: Config.Get(): Configuration key not found. Key: results-destination-folder - Using default value: /Lean/Launcher/bin/Debug/Notebooks/research
+2020-09-29T17:56:27.8020090Z TRACE:: Config.Get(): Configuration key not found. Key: map-file-provider - Using default value: LocalDiskMapFileProvider
+2020-09-29T17:56:27.8098430Z TRACE:: Config.Get(): Configuration key not found. Key: object-store-root - Using default value: ./storage
+2020-09-29T17:56:27.8461230Z TRACE:: Config.Get(): Configuration key not found. Key: api-access-token - Using default value: 
+2020-09-29T17:56:27.8605390Z TRACE:: Config.GetValue(): job-user-id - Using default value: 0
+2020-09-29T17:56:27.8608610Z TRACE:: Config.GetValue(): job-project-id - Using default value: 0
+2020-09-29T17:56:27.8702400Z TRACE:: Config.GetValue(): live-mode - Using default value: False
+2020-09-29T17:56:27.8708210Z TRACE:: Config.Get(): Configuration key not found. Key: algorithm-type-name - Using default value: 
+2020-09-29T17:56:27.9280550Z TRACE:: Config.GetValue(): regression-update-statistics - Using default value: False
+2020-09-29T17:56:27.9404520Z TRACE:: Config.Get(): Configuration key not found. Key: lean-manager-type - Using default value: LocalLeanManager
+2020-09-29T17:56:27.9696760Z TRACE:: Config.GetValue(): job-user-id - Using default value: 0
+2020-09-29T17:56:27.9703270Z TRACE:: Config.Get(): Configuration key not found. Key: api-access-token - Using default value: 
+2020-09-29T17:56:28.0012610Z TRACE:: Config.Get(): Configuration key not found. Key: cloud-api-url - Using default value: https://www.quantconnect.com/api/v2/
+2020-09-29T17:56:28.3377490Z TRACE:: Config.GetValue(): scheduled-event-leaky-bucket-capacity - Using default value: 120
+2020-09-29T17:56:28.3396900Z TRACE:: Config.GetValue(): scheduled-event-leaky-bucket-refill-amount - Using default value: 18
+2020-09-29T17:56:28.3407870Z TRACE:: Config.GetValue(): scheduled-event-leaky-bucket-time-interval-minutes - Using default value: 1440
+2020-09-29T17:56:28.3567160Z TRACE:: Config.GetValue(): algorithm-manager-time-loop-maximum - Using default value: 20
+2020-09-29T17:56:28.3606360Z TRACE:: Config.GetValue(): job-user-id - Using default value: 0
+2020-09-29T17:56:28.3611590Z TRACE:: Config.GetValue(): project-id - Using default value: 0
+2020-09-29T17:56:28.3617670Z TRACE:: Config.Get(): Configuration key not found. Key: api-access-token - Using default value: 
+2020-09-29T17:56:28.3624140Z TRACE:: Config.GetValue(): scheduled-event-leaky-bucket-capacity - Using default value: 120
+2020-09-29T17:56:28.3628650Z TRACE:: Config.GetValue(): scheduled-event-leaky-bucket-refill-amount - Using default value: 18
+2020-09-29T17:56:28.3632330Z TRACE:: Config.GetValue(): scheduled-event-leaky-bucket-time-interval-minutes - Using default value: 1440
+2020-09-29T17:56:28.3640090Z TRACE:: Config.GetValue(): storage-limit-mb - Using default value: 5
+2020-09-29T17:56:28.3644300Z TRACE:: Config.GetValue(): storage-file-count - Using default value: 100
+2020-09-29T17:56:28.3649260Z TRACE:: Config.GetValue(): storage-permissions - Using default value: 3
+2020-09-29T17:56:28.3717590Z TRACE:: LocalObjectStore.Initialize(): Storage Root: /Lean/Launcher/bin/Debug/Notebooks/research/storage/QuantBook
+2020-09-29T17:56:28.4013760Z TRACE:: Config.Get(): Configuration key not found. Key: history-provider - Using default value: SubscriptionDataReaderHistoryProvider
+2020-09-29T17:56:28.9824380Z TRACE:: Config.GetValue(): data-feed-workers-count - Using default value: 8
+2020-09-29T17:56:28.9829760Z TRACE:: Config.GetValue(): data-feed-max-work-weight - Using default value: 400
+2020-09-29T17:56:28.9833350Z TRACE:: Config.Get(): Configuration key not found. Key: data-feed-queue-type - Using default value: QuantConnect.Lean.Engine.DataFeeds.WorkScheduling.WorkQueue, QuantConnect.Lean.Engine
+2020-09-29T17:56:28.9837760Z TRACE:: WeightedWorkScheduler(): will use 8 workers and MaxWorkWeight is 400. Queue type: WorkQueue
+2020-09-29T17:56:29.1065690Z TRACE:: Config.GetValue(): show-missing-data-logs - Using default value: False
+2020-09-29T18:07:21.2220520Z TRACE:: QuantBook started; Is Python: True
+2020-09-29T18:07:21.2256390Z TRACE:: Config.Get(): Configuration key not found. Key: map-file-provider - Using default value: LocalDiskMapFileProvider
+2020-09-29T18:07:21.5698930Z TRACE:: Config.Get(): Configuration key not found. Key: data-directory - Using default value: ../../../Data/
+2020-09-29T18:07:21.5717180Z TRACE:: Config.Get(): Configuration key not found. Key: version-id - Using default value: 
+2020-09-29T18:07:21.5725850Z TRACE:: Config.Get(): Configuration key not found. Key: cache-location - Using default value: /Data/
+2020-09-29T18:07:22.5836100Z TRACE:: Config.Get(): Configuration key not found. Key: setup-handler - Using default value: ConsoleSetupHandler
+2020-09-29T18:07:22.5840820Z TRACE:: Config.Get(): Configuration key not found. Key: transaction-handler - Using default value: BacktestingTransactionHandler
+2020-09-29T18:07:22.5845550Z TRACE:: Config.Get(): Configuration key not found. Key: real-time-handler - Using default value: BacktestingRealTimeHandler
+2020-09-29T18:07:22.5849090Z TRACE:: Config.Get(): Configuration key not found. Key: data-feed-handler - Using default value: FileSystemDataFeed
+2020-09-29T18:07:22.5852880Z TRACE:: Config.Get(): Configuration key not found. Key: result-handler - Using default value: BacktestingResultHandler
+2020-09-29T18:07:22.5857280Z TRACE:: Config.Get(): Configuration key not found. Key: map-file-provider - Using default value: LocalDiskMapFileProvider
+2020-09-29T18:07:22.5861170Z TRACE:: Config.Get(): Configuration key not found. Key: factor-file-provider - Using default value: LocalDiskFactorFileProvider
+2020-09-29T18:07:22.5865830Z TRACE:: Config.Get(): Configuration key not found. Key: data-provider - Using default value: DefaultDataProvider
+2020-09-29T18:07:22.5872390Z TRACE:: Config.Get(): Configuration key not found. Key: alpha-handler - Using default value: DefaultAlphaHandler
+2020-09-29T18:07:22.5878010Z TRACE:: Config.Get(): Configuration key not found. Key: object-store - Using default value: LocalObjectStore
+2020-09-29T18:07:22.5883930Z TRACE:: Config.Get(): Configuration key not found. Key: data-permission-manager - Using default value: DataPermissionManager
+2020-09-29T18:07:22.5958660Z TRACE:: Config.Get(): Configuration key not found. Key: results-destination-folder - Using default value: /Lean/Launcher/bin/Debug/Notebooks/research
+2020-09-29T18:07:22.6522820Z TRACE:: Config.Get(): Configuration key not found. Key: map-file-provider - Using default value: LocalDiskMapFileProvider
+2020-09-29T18:07:22.6637350Z TRACE:: Config.Get(): Configuration key not found. Key: object-store-root - Using default value: ./storage
+2020-09-29T18:07:22.6719220Z TRACE:: Config.Get(): Configuration key not found. Key: api-access-token - Using default value: 
+2020-09-29T18:07:22.6756020Z TRACE:: Config.GetValue(): job-user-id - Using default value: 0
+2020-09-29T18:07:22.6760750Z TRACE:: Config.GetValue(): job-project-id - Using default value: 0
+2020-09-29T18:07:22.6814560Z TRACE:: Config.GetValue(): live-mode - Using default value: False
+2020-09-29T18:07:22.6821430Z TRACE:: Config.Get(): Configuration key not found. Key: algorithm-type-name - Using default value: 
+2020-09-29T18:07:22.6898510Z TRACE:: Config.GetValue(): regression-update-statistics - Using default value: False
+2020-09-29T18:07:22.6917960Z TRACE:: Config.Get(): Configuration key not found. Key: lean-manager-type - Using default value: LocalLeanManager
+2020-09-29T18:07:22.6958480Z TRACE:: Config.GetValue(): job-user-id - Using default value: 0
+2020-09-29T18:07:22.6963350Z TRACE:: Config.Get(): Configuration key not found. Key: api-access-token - Using default value: 
+2020-09-29T18:07:22.7256470Z TRACE:: Config.Get(): Configuration key not found. Key: cloud-api-url - Using default value: https://www.quantconnect.com/api/v2/
+2020-09-29T18:07:23.2360770Z TRACE:: Config.GetValue(): scheduled-event-leaky-bucket-capacity - Using default value: 120
+2020-09-29T18:07:23.2383090Z TRACE:: Config.GetValue(): scheduled-event-leaky-bucket-refill-amount - Using default value: 18
+2020-09-29T18:07:23.2397360Z TRACE:: Config.GetValue(): scheduled-event-leaky-bucket-time-interval-minutes - Using default value: 1440
+2020-09-29T18:07:23.2474590Z TRACE:: Config.GetValue(): algorithm-manager-time-loop-maximum - Using default value: 20
+2020-09-29T18:07:23.2518930Z TRACE:: Config.GetValue(): job-user-id - Using default value: 0
+2020-09-29T18:07:23.2528200Z TRACE:: Config.GetValue(): project-id - Using default value: 0
+2020-09-29T18:07:23.2535460Z TRACE:: Config.Get(): Configuration key not found. Key: api-access-token - Using default value: 
+2020-09-29T18:07:23.2542730Z TRACE:: Config.GetValue(): scheduled-event-leaky-bucket-capacity - Using default value: 120
+2020-09-29T18:07:23.2547530Z TRACE:: Config.GetValue(): scheduled-event-leaky-bucket-refill-amount - Using default value: 18
+2020-09-29T18:07:23.2555140Z TRACE:: Config.GetValue(): scheduled-event-leaky-bucket-time-interval-minutes - Using default value: 1440
+2020-09-29T18:07:23.2562170Z TRACE:: Config.GetValue(): storage-limit-mb - Using default value: 5
+2020-09-29T18:07:23.2568500Z TRACE:: Config.GetValue(): storage-file-count - Using default value: 100
+2020-09-29T18:07:23.2579790Z TRACE:: Config.GetValue(): storage-permissions - Using default value: 3
+2020-09-29T18:07:23.2669230Z TRACE:: LocalObjectStore.Initialize(): Storage Root: /Lean/Launcher/bin/Debug/Notebooks/research/storage/QuantBook
+2020-09-29T18:07:23.3010850Z TRACE:: Config.Get(): Configuration key not found. Key: history-provider - Using default value: SubscriptionDataReaderHistoryProvider
+2020-09-29T18:07:30.2114040Z TRACE:: Config.GetValue(): data-feed-workers-count - Using default value: 8
+2020-09-29T18:07:30.2120020Z TRACE:: Config.GetValue(): data-feed-max-work-weight - Using default value: 400
+2020-09-29T18:07:30.2126310Z TRACE:: Config.Get(): Configuration key not found. Key: data-feed-queue-type - Using default value: QuantConnect.Lean.Engine.DataFeeds.WorkScheduling.WorkQueue, QuantConnect.Lean.Engine
+2020-09-29T18:07:30.2135540Z TRACE:: WeightedWorkScheduler(): will use 8 workers and MaxWorkWeight is 400. Queue type: WorkQueue
+2020-09-29T18:07:30.2761250Z TRACE:: Config.GetValue(): show-missing-data-logs - Using default value: False
