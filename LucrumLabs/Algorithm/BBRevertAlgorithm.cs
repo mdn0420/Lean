@@ -124,7 +124,7 @@ namespace LucrumLabs.Algorithm
                 return;
             }
 
-            var data = new ResultBarData(Securities[symbol] as Forex, bar, TimeZone)
+            var data = new ParallaxResultBarData(Securities[symbol] as Forex, bar, TimeZone)
             {
                 BBMid = bb.MiddleBand,
                 BBUpper = bb.UpperBand,

@@ -1,17 +1,23 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using LucrumLabs.Data;
 using LucrumLabs.Trades;
+using Newtonsoft.Json;
+using NodaTime;
 using QuantConnect;
 using QuantConnect.Algorithm;
 using QuantConnect.Brokerages;
+using QuantConnect.Configuration;
 using QuantConnect.Data;
+using QuantConnect.Data.Fundamental;
 using QuantConnect.Data.Market;
 using QuantConnect.Indicators;
 using QuantConnect.Orders;
 using QuantConnect.Securities;
 using QuantConnect.Securities.Forex;
+using QuantConnect.Util;
 
 namespace LucrumLabs.Algorithm
 {
@@ -20,9 +26,28 @@ namespace LucrumLabs.Algorithm
     /// </summary>
     public class StdDevRevertAlgorithm : QCAlgorithm
     {
-        protected TimeSpan TradingTimeFrame = TimeSpan.FromMinutes(15);
+        private class StdDevBarData : ResultBarData
+        {
+            [JsonConverter(typeof(JsonRoundingConverter))]
+            public decimal BBMid;
+            [JsonConverter(typeof(JsonRoundingConverter))]
+            public decimal BBUpper;
+            [JsonConverter(typeof(JsonRoundingConverter))]
+            public decimal BBLower;
 
-        protected readonly string[] PAIRS = new[] {"AUDCAD"};
+            public decimal atrPips;
+            
+            public StdDevBarData(Forex forex, QuoteBar bar, BollingerBands bb, AverageTrueRange atr, DateTimeZone tz) : base(forex, bar, tz)
+            {
+                BBMid = bb.MiddleBand;
+                BBUpper = bb.UpperBand;
+                BBLower = bb.LowerBand;
+                atrPips = Math.Round(atr / ForexUtils.GetPipSize(forex), 1);
+            }
+        } 
+        protected TimeSpan TradingTimeFrame = TimeSpan.FromHours(1);
+
+        protected readonly string[] PAIRS = ForexPairs.MAJORS;
         
         protected Dictionary<Symbol, RollingWindow<QuoteBar>> _setupWindow = new Dictionary<Symbol, RollingWindow<QuoteBar>>();
         protected Dictionary<Symbol, BollingerBands> _bollingerBands = new Dictionary<Symbol, BollingerBands>();
@@ -30,6 +55,8 @@ namespace LucrumLabs.Algorithm
         
         protected List<Symbol> _activeSymbols = new List<Symbol>();
         protected Dictionary<Symbol, ManagedTrade> _activeTrades = new Dictionary<Symbol, ManagedTrade>();
+
+        protected AlgorithmResults _results = new AlgorithmResults();
         
         public override void Initialize()
         {
@@ -64,7 +91,7 @@ namespace LucrumLabs.Algorithm
             
             //var stoch = _stochastics[symbol] = new Stochastic(14, 3, 3);
             var bb = _bollingerBands[symbol] = new BollingerBands(20, 2.5m);
-            var atr = _atrs[symbol] = new AverageTrueRange(14, MovingAverageType.Simple);
+            var atr = _atrs[symbol] = new AverageTrueRange(14 );
             //RegisterIndicator(symbol, stoch, consolidator);
             RegisterIndicator(symbol, bb, consolidator);
             RegisterIndicator(symbol, atr, consolidator);
@@ -106,17 +133,9 @@ namespace LucrumLabs.Algorithm
                 return;
             }
 
-            var data = new ResultBarData(Securities[symbol] as Forex, bar, TimeZone)
-            {
-                BBMid = bb.MiddleBand,
-                BBUpper = bb.UpperBand,
-                BBLower = bb.LowerBand,
-                atrPips = Math.Round(atr / ForexUtils.GetPipSize(Securities[symbol] as Forex), 1)
-            };
-            //_results.BarData.Add(data);
-            
-            
-            
+            var data = new StdDevBarData(Securities[symbol] as Forex, bar, bb, atr, TimeZone);
+            _results.BarData.Add(data);
+
             /*
             _bbUpperWindow[symbol].Add(bb.UpperBand.Current);
             _bbLowerWindow[symbol].Add(bb.LowerBand.Current);
@@ -134,7 +153,16 @@ namespace LucrumLabs.Algorithm
             var atr = _atrs[symbol];
             var window = _setupWindow[symbol];
 
+            var prevBar = window[1];
             var thisBar = window[0];
+
+            var range = AverageTrueRange.ComputeTrueRange(prevBar, thisBar);
+            if (range / atr > 3m)
+            {
+                // skip large momentum bars
+                return;
+            }
+            
             if (thisBar.Close < bb.LowerBand)
             {
                 // long setup
@@ -153,6 +181,15 @@ namespace LucrumLabs.Algorithm
         private void TryOpenTrade(QuoteBar bar, OrderDirection direction, decimal atr)
         {
             var symbol = bar.Symbol;
+            /*
+            if (_activeTrades.ContainsKey(symbol))
+            {
+                // close any open trades
+                var trade = _activeTrades[symbol];
+                trade.Close();
+                CleanupTrades();
+            }*/
+            
             if (!_activeTrades.ContainsKey(symbol))
             {
                 decimal entryPrice = bar.Close; // todo: use ask/bid price instead?
@@ -160,13 +197,15 @@ namespace LucrumLabs.Algorithm
                 decimal tpPrice;
                 if (direction == OrderDirection.Buy)
                 {
-                    slPrice = bar.Low - atr;
-                    tpPrice = entryPrice + ((entryPrice - slPrice) * 1.2m);
+                    slPrice = entryPrice - atr;
+                    //tpPrice = entryPrice + ((entryPrice - slPrice) * 1m);
+                    tpPrice = entryPrice + atr;
                 }
                 else
                 {
-                    slPrice = bar.High + atr;
-                    tpPrice = entryPrice - ((slPrice - entryPrice) * 1.2m);
+                    slPrice = entryPrice + atr;
+                    //tpPrice = entryPrice - ((slPrice - entryPrice) * 1m);
+                    tpPrice = entryPrice - atr;
                 }
                 
                 Forex pair = this.Securities[symbol] as Forex;
@@ -188,6 +227,17 @@ namespace LucrumLabs.Algorithm
             else
             {
                 Console.WriteLine("{0} - We currently have a pending trade.. bailing on {1} idea", bar.Time, symbol);
+                // Record for analysis purposes
+                TradeSetupData setupData = new TradeSetupData() {
+                    BarTime = bar.Time.ConvertToUtc(TimeZone),
+                    direction = direction.ToString(),
+                    slPips = 0,
+                    tpPips = 0,
+                    plPips = 0,
+                    symbol = symbol,
+                    tradeIndex = -1
+                };
+                _results.TradeSetups.Add(setupData);
             }
         }
         
@@ -239,9 +289,9 @@ namespace LucrumLabs.Algorithm
 
             foreach (var symbol in remove)
             {
-                //var trade = _activeTrades[symbol];
-                //var stats = trade.GetStats();
-                //_results.TradeSetups.AddRange(stats);
+                var trade = _activeTrades[symbol];
+                var stats = trade.GetStats();
+                _results.TradeSetups.Add(stats);
                 _activeTrades.Remove(symbol);
                 _activeSymbols.Remove(symbol);
             }
@@ -260,6 +310,13 @@ namespace LucrumLabs.Algorithm
             debugStr += string.Format("ATR:{0:F5}", _atrs[bar.Symbol]);
             //debugStr += string.Format("BBMid:{0:F5} Up: {1:F5} Low: {2:F5}", _bb.MiddleBand, _bb.UpperBand, _bb.LowerBand);
             Console.WriteLine(debugStr);
+        }
+        
+        public override void OnEndOfAlgorithm()
+        {
+            string resultsFolder = Config.Get("results-destination-folder", Directory.GetCurrentDirectory());;
+            var filePath = Path.Combine(resultsFolder, $"{AlgorithmId}-analysis_data.json");
+            File.WriteAllText(filePath, JsonConvert.SerializeObject(_results, Formatting.Indented));
         }
         
         public void PrintBalance()

@@ -27,20 +27,6 @@ namespace LucrumLabs.Algorithm
         
         public decimal spread { get; private set; }
 
-        [JsonConverter(typeof(JsonRoundingConverter))]
-        public decimal BBMid;
-        [JsonConverter(typeof(JsonRoundingConverter))]
-        public decimal BBUpper;
-        [JsonConverter(typeof(JsonRoundingConverter))]
-        public decimal BBLower;
-
-        [JsonConverter(typeof(JsonRoundingConverter))]
-        public decimal StochK;
-        [JsonConverter(typeof(JsonRoundingConverter))]
-        public decimal StochD;
-
-        public decimal atrPips;
-
         public ResultBarData(Forex forex, QuoteBar bar, DateTimeZone tz)
         {
             Symbol = bar.Symbol;

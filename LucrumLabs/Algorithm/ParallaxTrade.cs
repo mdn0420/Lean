@@ -42,7 +42,9 @@ namespace LucrumLabs.Algorithm
         protected override string TradeName => _tradeName;
         private string _tradeName;
 
-        // True if price hit extension before entering
+        public override bool WasCancelled => _expired;
+
+// True if price hit extension before entering
         private bool _expired;
 
         public ParallaxTrade(QCAlgorithm algorithm, 
@@ -75,9 +77,6 @@ namespace LucrumLabs.Algorithm
         protected override void CalculatePrices()
         {
             Forex pair = _algorithm.Securities[_symbol] as Forex;
-
-            
-            
             decimal pipSize = ForexUtils.GetPipSize(pair);
 
             _entryPrice = GetFibPrice(_entryFib);
@@ -95,14 +94,7 @@ namespace LucrumLabs.Algorithm
             _slPrice = GetFibPrice(_slFib);
             _tpPrice = GetFibPrice(_tpFib);
             _extensionPrice = GetFibPrice(ExpireFibLevel);
-            
-            RoundPrice(ref _entryPrice);
-            RoundPrice(ref _slPrice);
-            RoundPrice(ref _tpPrice);
 
-            _riskPips = Math.Abs(_entryPrice - _slPrice) / pipSize;
-            _tpPips = Math.Abs(_entryPrice - _tpPrice) / pipSize;
-            
             _quantity = ForexUtils.CalculatePositionSize(pair, _riskPips, _algorithm.Portfolio.MarginRemaining, _riskPercent);
             if (_direction == OrderDirection.Sell)
             {
@@ -254,33 +246,6 @@ namespace LucrumLabs.Algorithm
                 Console.WriteLine("{0} - Moving stop loss on {1} to {2}", _algorithm.Time, _tradeName, newStopPrice);
                 _slOrder.UpdateStopPrice(newStopPrice);
             }
-        }
-
-        public TradeSetupData GetStats()
-        {
-            var fillPrice = 0m;
-            if (_entryOrder.QuantityFilled != 0)
-            {
-                fillPrice = _entryOrder.AverageFillPrice;
-            }
-            TradeSetupData result = new TradeSetupData()
-            {
-                BarTime = _setupBar.Time.ConvertToUtc(_algorithm.TimeZone),
-                direction = _direction.ToString(),
-                entryPrice = _entryPrice,
-                entryTime = _entryTimeUtc,
-                closeTime = _closeTimeUtc,
-                fillPrice = fillPrice,
-                slPrice = _slPrice,
-                tpPrice = _tpPrice,
-                slPips = _riskPips,
-                tpPips = _tpPips,
-                plPips = _profitLossPips,
-                symbol = _symbol,
-                canceled = _expired,
-                tradeIndex = _algorithm.TradeBuilder.ClosedTrades.IndexOf(_trade)
-            };
-            return result;
         }
     }
 }

@@ -53,6 +53,7 @@
     <Compile Include="Algorithm\InsideBarAlgorithm.cs" />
     <Compile Include="Algorithm\InsideBarTrade.cs" />
     <Compile Include="Algorithm\ParallaxManualAlgorithm.cs" />
+    <Compile Include="Algorithm\ParallaxResultBarData.cs" />
     <Compile Include="Algorithm\ParallaxTradeSetup.cs" />
     <Compile Include="Algorithm\ResultBarData.cs" />
     <Compile Include="Algorithm\EmaForexAlgorithm.cs" />
@@ -62,6 +63,7 @@
     <Compile Include="Algorithm\TradeSetupData.cs" />
     <Compile Include="AlgoUtils.cs" />
     <Compile Include="Alpha\StdDevAlphaModel.cs" />
+    <Compile Include="BarDataWriter.cs" />
     <Compile Include="BarUtils.cs" />
     <Compile Include="Data\SmoothQuoteBarConsolidator.cs" />
     <Compile Include="ForexPairs.cs" />

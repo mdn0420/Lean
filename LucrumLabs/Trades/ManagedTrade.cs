@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using LucrumLabs.Algorithm;
 using QuantConnect;
 using QuantConnect.Algorithm;
 using QuantConnect.Data.Market;
@@ -31,8 +32,12 @@ namespace LucrumLabs.Trades
         protected decimal _tpPrice;
         protected int _quantity;
 
+        protected decimal _riskPips;
+        protected decimal _tpPips;
+
         protected OrderType _entryOrderType;
 
+        protected DateTime _openTimeUtc = DateTime.MinValue;
         protected DateTime _entryTimeUtc = DateTime.MinValue;
         protected DateTime _closeTimeUtc = DateTime.MinValue;
 
@@ -48,6 +53,8 @@ namespace LucrumLabs.Trades
         protected Trade _trade;
 
         protected virtual string TradeName => _symbol;
+
+        public virtual bool WasCancelled => false; 
         
         public ManagedTrade(QCAlgorithm algorithm, Symbol symbol, OrderDirection direction, OrderType entryOrderType)
         {
@@ -67,6 +74,11 @@ namespace LucrumLabs.Trades
             RoundPrice(ref _slPrice);
             RoundPrice(ref _tpPrice);
             
+            Forex pair = _algorithm.Securities[_symbol] as Forex;
+            decimal pipSize = ForexUtils.GetPipSize(pair);
+            _riskPips = Math.Abs(_entryPrice - _slPrice) / pipSize;
+            _tpPips = Math.Abs(_entryPrice - _tpPrice) / pipSize;
+
             if (_entryOrder != null)
             {
                 _algorithm.Error("Tried to place duplicate trade");
@@ -81,8 +93,10 @@ namespace LucrumLabs.Trades
             }
 
             Console.WriteLine("{0} Setup order for {1} {2}, entry:{3}, sl:{4}, tp:{5}", _algorithm.Time, _quantity, _symbol, _entryPrice, _slPrice, _tpPrice);
-            
 
+
+            _openTimeUtc = _algorithm.UtcTime;
+            
             switch (_entryOrderType)
             {
                 case OrderType.Limit:
@@ -265,6 +279,33 @@ namespace LucrumLabs.Trades
             //_algorithm.Debug(string.Format("Opening orders - SL: {0}, TP: {1}", slPrice, tpPrice));
             _tpOrder = _algorithm.LimitOrder(_symbol, -_quantity, _tpPrice, string.Format("tp:{0}", _entryOrder.OrderId));
             _slOrder = _algorithm.StopMarketOrder(_symbol, -_quantity, _slPrice, string.Format("sl:{0}", _entryOrder.OrderId));
+        }
+        
+        public virtual TradeSetupData GetStats()
+        {
+            var fillPrice = 0m;
+            if (_entryOrder.QuantityFilled != 0)
+            {
+                fillPrice = _entryOrder.AverageFillPrice;
+            }
+            TradeSetupData result = new TradeSetupData()
+            {
+                BarTime = _openTimeUtc,
+                direction = _direction.ToString(),
+                entryPrice = _entryPrice,
+                entryTime = _entryTimeUtc,
+                closeTime = _closeTimeUtc,
+                fillPrice = fillPrice,
+                slPrice = _slPrice,
+                tpPrice = _tpPrice,
+                slPips = _riskPips,
+                tpPips = _tpPips,
+                plPips = _profitLossPips,
+                symbol = _symbol,
+                canceled = WasCancelled,
+                tradeIndex = _algorithm.TradeBuilder.ClosedTrades.IndexOf(_trade)
+            };
+            return result;
         }
     }
 }
