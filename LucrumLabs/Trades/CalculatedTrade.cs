@@ -26,12 +26,14 @@ namespace LucrumLabs.Trades
 
         public override void OnDataUpdate(QuoteBar bar)
         {
-            /*
-            if (bar.EndTime - _entryTimeUtc >= bar.Period && _state == TradeState.PENDING)
+            if (_state == TradeState.PENDING)
             {
-                Console.WriteLine("Expiring trade");
-                Close();
-            }*/
+                if (bar.EndTime.ConvertToUtc(_algorithm.TimeZone) - _openTimeUtc >= TimeSpan.FromHours(2))
+                {
+                    Console.WriteLine("Expiring trade at {0}", _algorithm.Time);
+                    Close();
+                }
+            }
         }
     }
 }

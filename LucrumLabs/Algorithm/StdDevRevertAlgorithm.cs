@@ -47,7 +47,7 @@ namespace LucrumLabs.Algorithm
         } 
         protected TimeSpan TradingTimeFrame = TimeSpan.FromHours(1);
 
-        protected readonly string[] PAIRS = ForexPairs.MAJORS;
+        protected readonly string[] PAIRS = new[] {"USDJPY"};
         
         protected Dictionary<Symbol, RollingWindow<QuoteBar>> _setupWindow = new Dictionary<Symbol, RollingWindow<QuoteBar>>();
         protected Dictionary<Symbol, BollingerBands> _bollingerBands = new Dictionary<Symbol, BollingerBands>();
@@ -157,11 +157,18 @@ namespace LucrumLabs.Algorithm
             var thisBar = window[0];
 
             var range = AverageTrueRange.ComputeTrueRange(prevBar, thisBar);
-            if (range / atr > 3m)
+            
+            if (range / atr > 4m)
             {
                 // skip large momentum bars
                 return;
             }
+
+            /*
+            if (range < atr)
+            {
+                return;
+            }*/
             
             if (thisBar.Close < bb.LowerBand)
             {
@@ -181,32 +188,39 @@ namespace LucrumLabs.Algorithm
         private void TryOpenTrade(QuoteBar bar, OrderDirection direction, decimal atr)
         {
             var symbol = bar.Symbol;
-            /*
+            
             if (_activeTrades.ContainsKey(symbol))
             {
-                // close any open trades
+                // close any pending trades
                 var trade = _activeTrades[symbol];
-                trade.Close();
-                CleanupTrades();
-            }*/
+                if (trade.State == ManagedTrade.TradeState.PENDING)
+                {
+                    trade.Close();
+                    CleanupTrades();
+                }
+            }
             
             if (!_activeTrades.ContainsKey(symbol))
             {
-                decimal entryPrice = bar.Close; // todo: use ask/bid price instead?
+                //decimal entryPrice = bar.Close; // todo: use ask/bid price instead?
+                decimal entryPrice;
                 decimal slPrice;
                 decimal tpPrice;
                 if (direction == OrderDirection.Buy)
                 {
-                    slPrice = entryPrice - atr;
+                    entryPrice = MathUtils.GetRetracementPrice(bar.Low, bar.High, 0.45m);
+                    slPrice = bar.Low - (atr / 2m);
                     //tpPrice = entryPrice + ((entryPrice - slPrice) * 1m);
-                    tpPrice = entryPrice + atr;
+                    tpPrice = entryPrice + ((entryPrice - slPrice) * 1.2m);
                 }
                 else
                 {
-                    slPrice = entryPrice + atr;
+                    entryPrice = MathUtils.GetRetracementPrice(bar.High, bar.Low, 0.45m);
+                    slPrice = bar.High + (atr / 2m);
                     //tpPrice = entryPrice - ((slPrice - entryPrice) * 1m);
-                    tpPrice = entryPrice - atr;
+                    tpPrice = entryPrice - ((slPrice - entryPrice) * 1.2m);
                 }
+                entryPrice = MathUtils.GetRetracementPrice(slPrice, tpPrice, 0.6m);
                 
                 Forex pair = this.Securities[symbol] as Forex;
                 decimal pipSize = ForexUtils.GetPipSize(pair);
@@ -216,7 +230,7 @@ namespace LucrumLabs.Algorithm
                 {
                     quantity = -quantity;
                 }
-                var trade = new CalculatedTrade(this, symbol, direction, OrderType.Market, entryPrice, slPrice, tpPrice, quantity);
+                var trade = new CalculatedTrade(this, symbol, direction, OrderType.StopMarket, entryPrice, slPrice, tpPrice, quantity);
                 
                 //Console.WriteLine("{0} - Setting up trade - Entry:{1}, SL: {2}, TP: {3}, Qty: {4}", this.Time, entryPrice, slPrice, tpPrice, quantity);
                 _activeTrades[symbol] = trade;

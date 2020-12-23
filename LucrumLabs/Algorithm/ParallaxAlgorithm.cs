@@ -223,7 +223,7 @@ namespace LucrumLabs.Algorithm
                     stochK <= 25 && // Stoch showing oversold
                     stochD <= 25 &&
                     // Didn't retrace too far on close
-                    thisBar.Close > MathUtils.GetFibPrice(thisBar.Low, thisBar.High, maxSetupRetrace) &&
+                    thisBar.Close > MathUtils.GetRetracementPrice(thisBar.Low, thisBar.High, maxSetupRetrace) &&
                     setupRatios.Top < SetupWickRatioMax) // Small wick in direction of trade
                 {
                     Console.WriteLine(
@@ -240,7 +240,7 @@ namespace LucrumLabs.Algorithm
                          thisBar.Low < prevBar.Low &&
                          stochK >= 75 &&
                          stochD >= 75 &&
-                         thisBar.Close < MathUtils.GetFibPrice(thisBar.High, thisBar.Low, maxSetupRetrace) &&
+                         thisBar.Close < MathUtils.GetRetracementPrice(thisBar.High, thisBar.Low, maxSetupRetrace) &&
                          setupRatios.Bottom < SetupWickRatioMax)
                 {
                     Console.WriteLine(

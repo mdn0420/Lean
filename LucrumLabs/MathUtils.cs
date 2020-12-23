@@ -9,7 +9,7 @@ namespace LucrumLabs
             return (v - a) / (b - a);
         }
         
-        public static decimal GetFibPrice(decimal start, decimal end, decimal fibValue)
+        public static decimal GetRetracementPrice(decimal start, decimal end, decimal fibValue)
         {
             decimal result = 0m;
 

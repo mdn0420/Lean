@@ -42,7 +42,7 @@ namespace LucrumLabs.Trades
             
             decimal pipSize = ForexUtils.GetPipSize(pair);
 
-            _entryPrice = MathUtils.GetFibPrice(_settings.StartPrice, _settings.EndPrice, _settings.EntryFib);
+            _entryPrice = MathUtils.GetRetracementPrice(_settings.StartPrice, _settings.EndPrice, _settings.EntryFib);
             
             // adjust entry price by 1 pip
             if (_direction == OrderDirection.Buy)
@@ -54,9 +54,9 @@ namespace LucrumLabs.Trades
                 _entryPrice += pipSize;
             }
             
-            _slPrice = MathUtils.GetFibPrice(_settings.StartPrice, _settings.EndPrice, _settings.SlFib);
-            _tpPrice = MathUtils.GetFibPrice(_settings.StartPrice, _settings.EndPrice, _settings.TpFib);
-            _expirePrice = MathUtils.GetFibPrice(_settings.StartPrice, _settings.EndPrice, _settings.ExpireFib);
+            _slPrice = MathUtils.GetRetracementPrice(_settings.StartPrice, _settings.EndPrice, _settings.SlFib);
+            _tpPrice = MathUtils.GetRetracementPrice(_settings.StartPrice, _settings.EndPrice, _settings.TpFib);
+            _expirePrice = MathUtils.GetRetracementPrice(_settings.StartPrice, _settings.EndPrice, _settings.ExpireFib);
             
             RoundPrice(ref _entryPrice);
             RoundPrice(ref _slPrice);

@@ -145,10 +145,10 @@ namespace LucrumLabs.Algorithm
         {
             if (_direction == OrderDirection.Buy)
             {
-                return MathUtils.GetFibPrice(_setupBar.Low, _setupBar.High, fibValue);
+                return MathUtils.GetRetracementPrice(_setupBar.Low, _setupBar.High, fibValue);
             }
             
-            return MathUtils.GetFibPrice(_setupBar.High, _setupBar.Low, fibValue);
+            return MathUtils.GetRetracementPrice(_setupBar.High, _setupBar.Low, fibValue);
         }
 
         public override void OnDataUpdate(QuoteBar bar)
