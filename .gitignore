@@ -144,6 +144,7 @@ $tf/
 # ReSharper is a .NET coding add-in
 _ReSharper*/
 *.[Rr]e[Ss]harper
+*.DotSettings
 *.DotSettings.user
 
 # JustCode is a .NET coding addin-in
@@ -272,5 +273,5 @@ QuantConnect.Lean.sln.DotSettings*
 #User notebook files
 Research/Notebooks
 
-# Backtest results
-LucrumLabs/results/
+#Docker result files
+Results/

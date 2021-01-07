@@ -168,6 +168,44 @@ namespace QuantConnect.Lean.Engine.Setup
 
             try
             {
+                // let the world know what we're doing since logging in can take a minute
+                parameters.ResultHandler.SendStatusUpdate(AlgorithmStatus.LoggingIn, "Logging into brokerage...");
+
+                brokerage.Message += brokerageOnMessage;
+
+                Log.Trace("BrokerageSetupHandler.Setup(): Connecting to brokerage...");
+                try
+                {
+                    // this can fail for various reasons, such as already being logged in somewhere else
+                    brokerage.Connect();
+                }
+                catch (Exception err)
+                {
+                    Log.Error(err);
+                    AddInitializationError(
+                        $"Error connecting to brokerage: {err.Message}. " +
+                        "This may be caused by incorrect login credentials or an unsupported account type.", err);
+                    return false;
+                }
+
+                if (!brokerage.IsConnected)
+                {
+                    // if we're reporting that we're not connected, bail
+                    AddInitializationError("Unable to connect to brokerage.");
+                    return false;
+                }
+
+                var message = $"{brokerage.Name} account base currency: {brokerage.AccountBaseCurrency ?? algorithm.AccountCurrency}";
+
+                Log.Trace($"BrokerageSetupHandler.Setup(): {message}");
+
+                algorithm.Debug(message);
+
+                if (brokerage.AccountBaseCurrency != null && brokerage.AccountBaseCurrency != algorithm.AccountCurrency)
+                {
+                    algorithm.SetAccountCurrency(brokerage.AccountBaseCurrency);
+                }
+
                 Log.Trace("BrokerageSetupHandler.Setup(): Initializing algorithm...");
 
                 parameters.ResultHandler.SendStatusUpdate(AlgorithmStatus.Initializing, "Initializing algorithm...");
@@ -198,11 +236,21 @@ namespace QuantConnect.Lean.Engine.Setup
                         //Set the source impl for the event scheduling
                         algorithm.Schedule.SetEventSchedule(parameters.RealTimeHandler);
 
+                        var optionChainProvider = Composer.Instance.GetPart<IOptionChainProvider>();
+                        if (optionChainProvider == null)
+                        {
+                            optionChainProvider = new CachingOptionChainProvider(new LiveOptionChainProvider());
+                        }
                         // set the option chain provider
-                        algorithm.SetOptionChainProvider(new CachingOptionChainProvider(new LiveOptionChainProvider()));
+                        algorithm.SetOptionChainProvider(optionChainProvider);
 
+                        var futureChainProvider = Composer.Instance.GetPart<IFutureChainProvider>();
+                        if (futureChainProvider == null)
+                        {
+                            futureChainProvider = new CachingFutureChainProvider(new LiveFutureChainProvider());
+                        }
                         // set the future chain provider
-                        algorithm.SetFutureChainProvider(new CachingFutureChainProvider(new LiveFutureChainProvider()));
+                        algorithm.SetFutureChainProvider(futureChainProvider);
 
                         // set the object store
                         algorithm.SetObjectStore(parameters.ObjectStore);
@@ -218,13 +266,6 @@ namespace QuantConnect.Lean.Engine.Setup
 
                         //Initialise the algorithm, get the required data:
                         algorithm.Initialize();
-
-                        if (algorithm.AccountCurrency != Currencies.USD)
-                        {
-                            throw new NotImplementedException(
-                                "BrokerageSetupHandler.Setup(): calling 'QCAlgorithm.SetAccountCurrency()' " +
-                                "is only supported in backtesting for now.");
-                        }
 
                         if (liveJob.Brokerage != "PaperBrokerage")
                         {
@@ -245,33 +286,6 @@ namespace QuantConnect.Lean.Engine.Setup
                 if (!initializeComplete)
                 {
                     AddInitializationError("Initialization timed out.");
-                    return false;
-                }
-
-                // let the world know what we're doing since logging in can take a minute
-                parameters.ResultHandler.SendStatusUpdate(AlgorithmStatus.LoggingIn, "Logging into brokerage...");
-
-                brokerage.Message += brokerageOnMessage;
-
-                Log.Trace("BrokerageSetupHandler.Setup(): Connecting to brokerage...");
-                try
-                {
-                    // this can fail for various reasons, such as already being logged in somewhere else
-                    brokerage.Connect();
-                }
-                catch (Exception err)
-                {
-                    Log.Error(err);
-                    AddInitializationError(
-                        $"Error connecting to brokerage: {err.Message}. " +
-                        "This may be caused by incorrect login credentials or an unsupported account type.", err);
-                    return false;
-                }
-
-                if (!brokerage.IsConnected)
-                {
-                    // if we're reporting that we're not connected, bail
-                    AddInitializationError("Unable to connect to brokerage.");
                     return false;
                 }
 
@@ -296,7 +310,7 @@ namespace QuantConnect.Lean.Engine.Setup
 
                 var supportedSecurityTypes = new HashSet<SecurityType>
                 {
-                    SecurityType.Equity, SecurityType.Forex, SecurityType.Cfd, SecurityType.Option, SecurityType.Future, SecurityType.Crypto
+                    SecurityType.Equity, SecurityType.Forex, SecurityType.Cfd, SecurityType.Option, SecurityType.Future, SecurityType.FutureOption, SecurityType.Crypto
                 };
                 var minResolution = new Lazy<Resolution>(() => algorithm.Securities.Select(x => x.Value.Resolution).DefaultIfEmpty(Resolution.Second).Min());
 
@@ -401,7 +415,7 @@ namespace QuantConnect.Lean.Engine.Setup
             {
                 Log.Trace("BrokerageSetupHandler.Setup(): Adding unrequested security: " + symbol.Value);
 
-                if (symbol.SecurityType == SecurityType.Option)
+                if (symbol.SecurityType == SecurityType.Option || symbol.SecurityType == SecurityType.FutureOption)
                 {
                     // add current option contract to the system
                     algorithm.AddOptionContract(symbol, minResolution, true, 1.0m);
