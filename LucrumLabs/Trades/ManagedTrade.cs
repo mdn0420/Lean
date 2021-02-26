@@ -49,10 +49,17 @@ namespace LucrumLabs.Trades
         protected OrderTicket _closeOrder; // Manual exit order
 
         protected decimal _profitLossPips;
+        
+        private ManualTradeBuilder _tradeBuilder;
+        private int _tradeId;
 
         protected Trade _trade;
 
-        protected virtual string TradeName => _symbol;
+        protected virtual string TradeName
+        {
+            get;
+            private set;
+        }
 
         public virtual bool WasCancelled => false; 
         
@@ -60,7 +67,9 @@ namespace LucrumLabs.Trades
         {
             // todo: it would be nice to register for order events directly with transaction handler
             _algorithm = algorithm;
+            _tradeBuilder = algorithm.TradeBuilder as ManualTradeBuilder;
             _symbol = symbol;
+            TradeName = _symbol;
             _direction = direction;
             _entryOrderType = entryOrderType;
         }
@@ -92,10 +101,11 @@ namespace LucrumLabs.Trades
                 return;
             }
 
-            Console.WriteLine("{0} Setup order for {1} {2}, entry:{3}, sl:{4}, tp:{5}", _algorithm.Time, _quantity, _symbol, _entryPrice, _slPrice, _tpPrice);
+            Console.WriteLine("{0} Setup order for {1} {2}, entry:{3}, sl:{4}, tp:{5}", _algorithm.UtcTime, _quantity, _symbol, _entryPrice, _slPrice, _tpPrice);
 
 
             _openTimeUtc = _algorithm.UtcTime;
+            _tradeId = _tradeBuilder.OpenTrade(_openTimeUtc, _slPrice, _tpPrice);
             
             switch (_entryOrderType)
             {
@@ -133,11 +143,12 @@ namespace LucrumLabs.Trades
         /// </summary>
         public void Close()
         {
-            _closeTimeUtc = _algorithm.Time.ConvertToUtc(_algorithm.TimeZone);
+            _closeTimeUtc = _algorithm.UtcTime;
             bool slOrTpHit = (_slOrder != null && _slOrder.QuantityFilled != 0) ||
                              (_tpOrder != null && _tpOrder.QuantityFilled != 0);
             if (_entryOrder != null && !_entryOrder.Status.IsClosed())
             {
+                _tradeBuilder.CancelTrade(_tradeId);
                 _entryOrder.Cancel();
             }
 
@@ -172,10 +183,13 @@ namespace LucrumLabs.Trades
 
         private void OnTradeEntered()
         {
+            TradeName = string.Format("{0}:{1}", _symbol, _entryOrder.OrderId);
             _entryTimeUtc = _entryOrder.Time;
             // Setup TP/SL orders
-            Console.WriteLine("{0} - Entered {1} trade for {2:N0} {3} @ {4}", _algorithm.Time, _direction, _entryOrder.QuantityFilled, TradeName, _entryOrder.AverageFillPrice);
+            Console.WriteLine("{0} - {3} Entered {1} trade for {2:N0} @ {4}", _algorithm.UtcTime, _direction, _entryOrder.QuantityFilled, TradeName, _entryOrder.AverageFillPrice);
             _state = TradeState.OPEN;
+            
+            _tradeBuilder.RegisterTradeEntry(_tradeId, _entryOrder.OrderId);
             //_algorithm.PrintBalance();
             PlaceManagementOrders();
         }
@@ -190,7 +204,7 @@ namespace LucrumLabs.Trades
                 } 
                 else if (orderEvent.Status == OrderStatus.Canceled)
                 {
-                    Console.WriteLine("{0} - Trade for {1} cancelled", _algorithm.Time, TradeName);
+                    Console.WriteLine("{0} - {1} Trade cancelled", _algorithm.UtcTime, TradeName);
                     Close();
                 }
                 else if (orderEvent.Status == OrderStatus.Invalid)
@@ -203,10 +217,11 @@ namespace LucrumLabs.Trades
             {
                 if (orderEvent.Status == OrderStatus.Filled)
                 {
+                    _tradeBuilder.RegisterTradeExit(_tradeId, _slOrder.OrderId);
                     UpdateProfitLoss();
                     Console.WriteLine(
-                        "{0} - Stop loss hit for {1} at {2}, Qty: {3}",
-                        _algorithm.Time,
+                        "{0} - {1} Stop loss hit at {2}, Qty: {3}",
+                        _algorithm.UtcTime,
                         TradeName,
                         orderEvent.FillPrice,
                         orderEvent.FillQuantity
@@ -218,10 +233,11 @@ namespace LucrumLabs.Trades
             {
                 if (orderEvent.Status == OrderStatus.Filled)
                 {
+                    _tradeBuilder.RegisterTradeExit(_tradeId, _tpOrder.OrderId);
                     UpdateProfitLoss();
                     Console.WriteLine(
-                            "{0} - Take profit hit for {1} at {2}, Qty: {3}",
-                            _algorithm.Time,
+                            "{0} - {1} Take profit hit at {2}, Qty: {3}",
+                            _algorithm.UtcTime,
                             TradeName,
                             orderEvent.FillPrice,
                             orderEvent.FillQuantity
@@ -246,7 +262,8 @@ namespace LucrumLabs.Trades
         
         private void UpdateProfitLoss()
         {
-            _trade = _algorithm.TradeBuilder.ClosedTrades.Last();
+            
+            _trade = _algorithm.TradeBuilder.ClosedTrades.LastOrDefault();
             if (_trade != null)
             {
                 Forex pair = _algorithm.Securities[_symbol] as Forex;

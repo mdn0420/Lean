@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using NodaTime;
 using QuantConnect;
 using QuantConnect.Algorithm;
 using QuantConnect.Algorithm.Framework.Alphas;
@@ -36,17 +37,20 @@ namespace LucrumLabs.Alpha
             {
                 var symbol = kvp.Key;
                 var symbolData = kvp.Value;
+                
+                // Number of bars before expiring the Insight
+                int barExpires = 5;
                 if (data.Time == symbolData.LastUpdate)
                 {
                     if (symbolData.CurrentState == SymbolData.State.LOWER)
                     {
-                        Console.WriteLine("{0} - Found long signal", data.Time);
-                        yield return Insight.Price(symbol, Resolution.Hour, 5, InsightDirection.Up);
+                        //Console.WriteLine("{0} - Found long signal", algorithm.UtcTime);
+                        yield return Insight.Price(symbol, Resolution.Hour, barExpires, InsightDirection.Up);
                     }
                     else if (symbolData.CurrentState == SymbolData.State.UPPER)
                     {
-                        Console.WriteLine("{0} - Found short signal", data.Time);
-                        yield return Insight.Price(symbol, Resolution.Hour, 5, InsightDirection.Down);
+                        //Console.WriteLine("{0} - Found short signal", algorithm.UtcTime);
+                        yield return Insight.Price(symbol, Resolution.Hour, barExpires, InsightDirection.Down);
                     }
                 }
             }
@@ -108,6 +112,8 @@ namespace LucrumLabs.Alpha
 
             public State CurrentState { get; private set; }
 
+            private QCAlgorithm _algorithm;
+
             public SymbolData(QCAlgorithm algorithm, Symbol symbol, Func<DateTime, CalendarInfo> timeFrame, int period, decimal k)
             {
                 Symbol = symbol;
@@ -115,6 +121,7 @@ namespace LucrumLabs.Alpha
                 _consolidator = new QuoteBarConsolidator(timeFrame);
                 _bollingerBands = new BollingerBands(period, k);
                 _bollingerBands.Updated += OnBandsUpdated;
+                _algorithm = algorithm;
                 algorithm.RegisterIndicator(symbol, _bollingerBands, _consolidator);
             }
 
@@ -134,14 +141,14 @@ namespace LucrumLabs.Alpha
                 var price = updated.Price; // same as "close"
                 if (price < _bollingerBands.LowerBand)
                 {
-                    PrintConsolidatedBar();
-                    Console.WriteLine("midBB: {0}, upperBB: {1}, lowerBB: {2}", _bollingerBands.MiddleBand, _bollingerBands.UpperBand, _bollingerBands.LowerBand);
+                    //PrintConsolidatedBar();
+                    //Console.WriteLine("State: LOWER, midBB: {0}, upperBB: {1}, lowerBB: {2}", _bollingerBands.MiddleBand, _bollingerBands.UpperBand, _bollingerBands.LowerBand);
                     CurrentState = State.LOWER;
                 }
                 else if (price > _bollingerBands.UpperBand.Current)
                 {
-                    PrintConsolidatedBar();
-                    Console.WriteLine("midBB: {0}, upperBB: {1}, lowerBB: {2}", _bollingerBands.MiddleBand, _bollingerBands.UpperBand, _bollingerBands.LowerBand);
+                    //PrintConsolidatedBar();
+                    //Console.WriteLine("State: UPPER, midBB: {0}, upperBB: {1}, lowerBB: {2}", _bollingerBands.MiddleBand, _bollingerBands.UpperBand, _bollingerBands.LowerBand);
                     CurrentState = State.UPPER;
                 }
                 else
@@ -158,7 +165,7 @@ namespace LucrumLabs.Alpha
             private void PrintConsolidatedBar()
             {
                 // Get working data because handlers get callled before DataConsolidator.Consolidated is updated
-                var consolidated = _consolidator.WorkingData as IBaseDataBar;
+                var consolidated = _consolidator.WorkingData as IBaseDataBar; 
                 if (consolidated != null)
                 {
                     Console.WriteLine(

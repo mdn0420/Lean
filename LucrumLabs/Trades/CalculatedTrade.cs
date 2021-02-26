@@ -26,6 +26,7 @@ namespace LucrumLabs.Trades
 
         public override void OnDataUpdate(QuoteBar bar)
         {
+            /*
             if (_state == TradeState.PENDING)
             {
                 if (bar.EndTime.ConvertToUtc(_algorithm.TimeZone) - _openTimeUtc >= TimeSpan.FromHours(2))
@@ -33,7 +34,7 @@ namespace LucrumLabs.Trades
                     Console.WriteLine("Expiring trade at {0}", _algorithm.Time);
                     Close();
                 }
-            }
+            }*/
         }
     }
 }

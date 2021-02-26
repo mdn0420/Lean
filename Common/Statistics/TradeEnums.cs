@@ -65,6 +65,11 @@ namespace QuantConnect.Statistics
         /// <summary>
         /// Last In Last Out fill matching method
         /// </summary>
-        LIFO
+        LIFO,
+        
+        /// <summary>
+        /// Match based on quantity
+        /// </summary>
+        QUANTITY
     }
 }

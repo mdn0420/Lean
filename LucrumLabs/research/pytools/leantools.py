@@ -22,6 +22,8 @@ def get_closed_trades_df(path):
     trades_json = data['TotalPerformance']['ClosedTrades']
 
     #print(json.dumps(trades_json, indent=4))
+    #df = pd.json_normalize(trades_json)
+    #df['EntryTime'] = pd.to_datetime(df['EntryTime'])
     return pd.json_normalize(trades_json)
 
 def get_bar_data_df(path):

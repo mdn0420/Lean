@@ -77,7 +77,7 @@ namespace LucrumLabs.Algorithm
         protected virtual void SetupDates()
         {
             SetStartDate(2019, 1, 1);
-            SetEndDate(2019, 12, 31);
+            SetEndDate(2019, 1, 31);
         }
         
         private void SetupPair(string ticker)

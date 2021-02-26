@@ -31,7 +31,7 @@ namespace LucrumLabs.Trades
         protected decimal _riskPips;
         protected decimal _tpPips;
 
-        public FibLevelsTrade(QCAlgorithm algorithm, Symbol symbol, OrderDirection direction, OrderType entryOrderType, FibLevelsTradeSettings settings) : base(algorithm, symbol, direction, entryOrderType)
+        public FibLevelsTrade(QCAlgorithm algorithm, ManualTradeBuilder tradeBuilder, Symbol symbol, OrderDirection direction, OrderType entryOrderType, FibLevelsTradeSettings settings) : base(algorithm, symbol, direction, entryOrderType)
         {
             _settings = settings;
         }

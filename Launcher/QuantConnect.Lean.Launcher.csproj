@@ -205,6 +205,10 @@
       <Project>{2545c0b4-fabb-49c9-8dd1-9ad7ee23f86b}</Project>
       <Name>QuantConnect</Name>
     </ProjectReference>
+    <ProjectReference Include="..\LucrumLabs\LucrumLabs.csproj">
+      <Project>{b08f81a7-aaa8-4d91-a502-57999c02ec25}</Project>
+      <Name>LucrumLabs</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Research\QuantConnect.Research.csproj">
       <Project>{9561d14a-467e-40ad-928e-ee9f758d7d98}</Project>
       <Name>QuantConnect.Research</Name>
